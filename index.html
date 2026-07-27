@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>三力平衡 · 晾衣杆+平行四边形定则 | 高三物理</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>晾衣杆 · 平行四边形定则 | 高三物理</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"Microsoft YaHei","PingFang SC",sans-serif;background:linear-gradient(135deg,#f5f7fa 0%,#e8ecf3 100%);color:#1f2937;min-height:100vh;padding:20px}
@@ -11,11 +10,11 @@ body{font-family:"Microsoft YaHei","PingFang SC",sans-serif;background:linear-gr
 .header h1{font-size:26px;color:#1a3a8f;font-weight:700;margin-bottom:4px}
 .header .sub{color:#6b7280;font-size:14px}
 .container{max-width:1100px;margin:0 auto}
-.panel{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.06);border:1px solid #e5e7eb;overflow:hidden;margin-bottom:20px}
+.panel{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.06);border:1px solid #e5e7eb;overflow:hidden;margin-bottom:20px}
 .panel-title{padding:12px 20px;font-weight:700;font-size:16px;background:linear-gradient(90deg,#eef2ff 0%,#f8fafc 100%);border-bottom:1px solid #e5e7eb;color:#1a3a8f;display:flex;align-items:center;gap:8px}
 .panel-title::before{content:'';display:inline-block;width:4px;height:18px;background:#1a3a8f;border-radius:2px}
 .canvas-wrap{background:#fff;padding:12px;width:100%;aspect-ratio:1.5/1}
-canvas{width:100%;height:100%;display:block}
+canvas{width:100%;height:100%;display:block;cursor:default}
 .data-card{margin:10px 16px 16px;padding:10px 14px;background:linear-gradient(135deg,#f8fafc 0%,#eef2ff 100%);border:1px solid #dbeafe;border-left:4px solid #1a3a8f;border-radius:6px;font-size:13px}
 .data-card .row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed #d1d5db}
 .data-card .row:last-child{border-bottom:none}
@@ -23,11 +22,11 @@ canvas{width:100%;height:100%;display:block}
 .legend{display:flex;flex-wrap:wrap;gap:14px;padding:6px 16px 12px;font-size:12px;color:#6b7280}
 .legend-item{display:flex;align-items:center;gap:4px}
 .legend-dot{width:10px;height:10px;border-radius:50%}
-.control-bar{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px 20px;box-shadow:0 2px 12px rgba(0,0,0,0.06);position:sticky;bottom:20px;z-index:10}
+.control-bar{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px 20px;box-shadow:0 2px 12px rgba(0,0,0,.06);position:sticky;bottom:20px;z-index:10}
 .ctrl-row{display:flex;align-items:center;gap:10px}
 .ctrl-row label{font-weight:700;color:#1a3a8f;font-size:14px;min-width:75px}
 input[type="range"]{flex:1;height:6px;-webkit-appearance:none;border-radius:3px;outline:none;background:linear-gradient(90deg,#1a3a8f 0%,#1a3a8f var(--p,0%),#e5e7eb var(--p,0%))}
-input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;background:#1a3a8f;border-radius:50%;cursor:pointer;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.2)}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;background:#1a3a8f;border-radius:50%;cursor:pointer;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,.2)}
 .angle-display{font-size:22px;font-weight:700;color:#1a3a8f;min-width:70px;text-align:right;font-family:"Courier New",monospace}
 .btn-group{display:flex;gap:6px;margin-left:12px}
 .btn{padding:6px 14px;border:1px solid #d1d5db;background:#fff;border-radius:6px;cursor:pointer;font-size:12px;color:#374151;font-family:inherit}
@@ -40,37 +39,36 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;hei
 <body>
 <div class="container">
 <div class="header">
-  <h1>三力平衡 · 晾衣杆模型 + 平行四边形定则</h1>
-  <div class="sub">光滑挂钩 ⇒ T₁ = T₂ | 绳长 L=300 恒定 | T₁+T₂(对角线) = mg(竖直向上)</div>
+  <h1>晾衣杆模型 · 平行四边形定则</h1>
+  <div class="sub">光滑挂钩 ⇒ T₁=T₂ | 绳长 L=300 固定 | 拖红色悬挂点上下移动 | 右边也有杆</div>
 </div>
 
 <div class="panel">
-  <div class="panel-title">晾衣杆 — 力的平行四边形</div>
-  <div class="canvas-wrap"><canvas id="cv" width="1000" height="650"></canvas></div>
+  <div class="panel-title">三杆门形框架 — 力的平行四边形</div>
+  <div class="canvas-wrap"><canvas id="cv" width="1000" height="680"></canvas></div>
   <div class="data-card">
-    <div class="row"><span>光滑挂钩 ⇒ T₁ = T₂ = T</span><span class="val" style="color:#dc2626" id="dT">T = 7.07 N</span></div>
-    <div class="row"><span>平衡方程 ⇒ 2T·cosθ = mg</span><span class="val" style="color:#1a3a8f" id="dCos">cosθ = 0.707</span></div>
-    <div class="row"><span>平行四边形 ⇒ |T₁+T₂| = mg</span><span class="val" style="color:#059669" id="dPar">合力 = 10.0 N = mg</span></div>
-    <div class="row"><span>θ / x_B / y_A</span><span class="val" style="color:#64748b" id="dPos">θ=45° x_B=212 y_A=106</span></div>
+    <div class="row"><span>T₁ = T₂ = T</span><span class="val" style="color:#dc2626" id="dT">T=7.07N</span></div>
+    <div class="row"><span>2T·cosθ = mg</span><span class="val" style="color:#1a3a8f" id="dCos">cosθ=0.707</span></div>
+    <div class="row"><span>平行四边形 |T₁+T₂| = mg</span><span class="val" style="color:#059669" id="dPar">合力=10.0N=mg</span></div>
+    <div class="row"><span>θ / h / d</span><span class="val" style="color:#64748b" id="dPos">θ=45°h=112d=141</span></div>
   </div>
   <div class="legend">
-    <div class="legend-item"><span class="legend-dot" style="background:#dc2626"></span>T₁ / T₂ 沿绳拉力（光滑挂钩两边相等）</div>
-    <div class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span>平移线（T₁、T₂的平行线，构成平行四边形）</div>
-    <div class="legend-item"><span class="legend-dot" style="background:#059669"></span>T₁+T₂ 对角线（竖直向上，大小=mg）</div>
-    <div class="legend-item"><span class="legend-dot" style="background:#1a3a8f"></span>mg 重力（向下，与合力反向）</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#dc2626"></span>T₁/T₂ 拉力（等长）</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span>平移线（平行四边形）</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#059669"></span>T₁+T₂ 对角线=竖直向上=mg</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#1a3a8f"></span>mg 重力</div>
   </div>
-  <div class="model-note">拖动下方 θ 滑块 → 几何随 x_B=L sinθ 改变 → 挂钩在 V 型顶点 → 平行四边形实时重绘</div>
 </div>
 
 <div class="control-bar">
   <div class="ctrl-row">
     <label>角度 θ</label>
-    <input type="range" id="thetaSlider" min="8" max="80" step="0.5" value="45">
+    <input type="range" id="thetaSlider" min="10" max="78" step="0.5" value="45">
     <span class="angle-display" id="thetaDisp">45.0°</span>
     <div class="btn-group">
       <button class="btn btn-primary" id="playBtn">▶ 播放</button>
-      <button class="btn" id="resetBtn">⟲ 复位(45°)</button>
-      <button class="btn" data-spd="0.5">0.5×</button>
+      <button class="btn" id="resetBtn">⟲ 复位</button>
+      <button class="btn" data-spd=".5">0.5×</button>
       <button class="btn active" data-spd="1">1.0×</button>
       <button class="btn" data-spd="2">2.0×</button>
     </div>
@@ -80,196 +78,195 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;hei
 
 <script>
 "use strict";
-const TR='#dc2626', AMBER='#f59e0b', GRN='#059669', BL='#1a3a8f', GREY='#64748b';
-const MG=10, L=300;
-let theta=45, playing=false, speed=1, dir=1, animId=null, lt=0;
+const TR='#dc2626',AMB='#f59e0b',GRN='#059669',BL='#1a3a8f',GRAY='#64748b';
+const MG=10,L=300,FRAME_W=320;
+let theta=45,playing=!1,speed=1,dir=1,animId=null,lt=0;
+// 拖拽状态
+let drag=null; // 'L' 或 'R'
+let hL=100,hR=100; // 悬挂点高度（距水平杆的距离，屏幕px）
+let dragStartY=0,dragStartH=0;
 
 function setup(cv){
-  const dpr=window.devicePixelRatio||1, r=cv.getBoundingClientRect();
-  cv.width=r.width*dpr; cv.height=r.height*dpr;
+  const dpr=window.devicePixelRatio||1,r=cv.getBoundingClientRect();
+  cv.width=r.width*dpr;cv.height=r.height*dpr;
   const ctx=cv.getContext('2d');
   ctx.setTransform(dpr*r.width/cv.getAttribute('width'),0,0,dpr*r.height/cv.getAttribute('height'),0,0);
   ctx.lineCap='round';ctx.lineJoin='round';
   return ctx;
 }
-function arrow(ctx,x1,y1,x2,y2,color,lw,label){
+function arrow(ctx,x1,y1,x2,y2,c,lw,lb){
   const dx=x2-x1,dy=y2-y1,len=Math.hypot(dx,dy);if(len<.3)return;
   const ux=dx/len,uy=dy/len,h=9;
-  ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=lw;
+  ctx.strokeStyle=c;ctx.fillStyle=c;ctx.lineWidth=lw;
   ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(x2,y2);
-  ctx.lineTo(x2-ux*h+uy*h*.4,y2-uy*h-ux*h*.4);
-  ctx.lineTo(x2-ux*h-uy*h*.4,y2-uy*h+ux*h*.4);
-  ctx.closePath();ctx.fill();
-  if(label){
-    ctx.font='bold 14px "Microsoft YaHei"';
-    ctx.fillStyle='#fff';ctx.strokeStyle='#fff';ctx.lineWidth=4;
-    const mx=x1+dx*.55+uy*10,my=y1+dy*.55-ux*10;
-    ctx.strokeText(label,mx,my);ctx.fillStyle=color;ctx.fillText(label,mx,my);
-  }
+  ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-ux*h+uy*h*.4,y2-uy*h-ux*h*.4);ctx.lineTo(x2-ux*h-uy*h*.4,y2-uy*h+ux*h*.4);ctx.closePath();ctx.fill();
+  if(lb){ctx.font='bold 14px "Microsoft YaHei"';ctx.fillStyle='#fff';ctx.strokeStyle='#fff';ctx.lineWidth=4;const mx=x1+dx*.55+uy*10,my=y1+dy*.55-ux*10;ctx.strokeText(lb,mx,my);ctx.fillStyle=c;ctx.fillText(lb,mx,my)}
 }
-function dashedLine(ctx,x1,y1,x2,y2,color,lw){
-  ctx.save(); ctx.setLineDash([6,4]); ctx.strokeStyle=color; ctx.lineWidth=lw;
-  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
-  ctx.setLineDash([]); ctx.restore();
-}
+function dash(ctx,x1,y1,x2,y2,c,lw){ctx.save();ctx.setLineDash([6,4]);ctx.strokeStyle=c;ctx.lineWidth=lw;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.setLineDash([]);ctx.restore()}
 function dot(ctx,x,y,r,c){ctx.fillStyle=c;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke()}
+
+// 根据hL,hR计算挂钩位置(等角迭代)
+function findHook(tDeg){const t=tDeg*Math.PI/180;
+  // 悬点: A(ox,oy+hL), B(ox+FW,oy+hR), 挂钩(x_h,oy+yh)
+  const FW=FRAME_W;
+  // 绳长L已知，等角条件+绳长约束联立
+  // x_h/(yh-hL) = (FW-x_h)/(yh-hR) → x_h·yh - x_h·hR = FW·yh - FW·hL - x_h·yh + x_h·hL
+  // → 2x_h·yh - x_h·hR - x_h·hL = FW·yh - FW·hL
+  // → x_h(2yh - hL - hR) = FW(yh - hL) ... (1)
+  // L = sqrt(x_h²+(yh-hL)²) + sqrt((FW-x_h)²+(yh-hR)²) ... (2)
+  // 数值二分搜索 yh 使 (1)+(2) 成立
+
+  let yLo=Math.max(hL,hR)+1,yHi=Math.max(hL,hR)+L;
+  let xh=FW/2,yh=yLo;
+  for(let i=0;i<35;i++){yh=(yLo+yHi)/2;
+    const den=2*yh-hL-hR;xh=Math.abs(den)<.01?FW/2:FW*(yh-hL)/den;
+    xh=Math.max(2,Math.min(FW-2,xh));
+    const L1=Math.hypot(xh,yh-hL),L2=Math.hypot(FW-xh,yh-hR),Lt=L1+L2;
+    const tL=xh/(yh-hL),tR=(FW-xh)/(yh-hR);
+    // 绳长大于实际→挂钩太低; 左角>右角→挂钩太靠左
+    if(Lt>L||tL>tR)yHi=yh;else yLo=yh;
+  }
+  return{xh:xh,yh:Math.max(yLo,Math.max(hL,hR)+2)};
+}
 
 function draw(tDeg){
   const cv=document.getElementById('cv'),ctx=setup(cv);
-  const W=cv.clientWidth,H=cv.clientHeight;
-  ctx.clearRect(0,0,W,H);
-  const t=tDeg*Math.PI/180;
+  const W=cv.clientWidth,H=cv.clientHeight;ctx.clearRect(0,0,W,H);
+  const t=tDeg*Math.PI/180,FW=FRAME_W;
 
-  // ─── 杆(L形，左竖直+上水平) ───
-  const ox=W*.18,oy=H*.10;
-  const bl=380;
-
+  // ─── 三杆框架(左竖+上横+右竖) ───
+  const ox=W*.20,oy=H*.08;
   ctx.strokeStyle='#475569';ctx.lineWidth=5;
-  ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox,oy+bl);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+bl,oy);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox,oy+400);ctx.stroke();    // 左杆
+  ctx.beginPath();ctx.moveTo(ox+FW,oy);ctx.lineTo(ox+FW,oy+400);ctx.stroke(); // 右杆
+  ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+FW,oy);ctx.stroke();     // 上杆
+  // 两角加固
   ctx.strokeStyle='#334155';ctx.lineWidth=2;
-  ctx.beginPath();ctx.arc(ox,oy,5,0,Math.PI*2);ctx.fillStyle='#334155';ctx.fill();ctx.stroke();
+  [ox,ox+FW].forEach(x=>{ctx.beginPath();ctx.arc(x,oy,5,0,Math.PI*2);ctx.fillStyle='#334155';ctx.fill();ctx.stroke()});
 
-  // ─── 几何：等角条件 + 绳长L 联立解 ───
-  // 已知 L, θ:
-  //   x_B = L sinθ        右悬挂点横距
-  //   y_A = L cosθ / 2    左悬挂点纵距（保证 V 型 y_h > y_A）
-  //   y_h = (L cosθ + y_A) / 2 = 3L cosθ / 4    挂钩纵坐标
-  //   x_h = (y_h - y_A) tanθ = L sinθ / 4 = x_B/4  挂钩横坐标
-  const xB=L*Math.sin(t);
-  const yA=L*Math.cos(t)/2;
-  const yh=3*L*Math.cos(t)/4;
-  const xh=xB/4;
-  const Lx=ox, Ly=oy+yA;
-  const Rx=ox+xB, Ry=oy;
-  const Hx=ox+xh, Hy=oy+yh;
+  // ─── 悬点位置 ───
+  const Ax=ox,Ay=oy+hL;
+  const Bx=ox+FW,By=oy+hR;
+  // 挂钩(迭代求解)
+  const hk=findHook(tDeg);
+  const Hx=ox+hk.xh,Hy=oy+hk.yh;
 
-  // ─── 绳(V型：从右→挂钩→左，两段均向上拉挂钩) ───
+  // ─── 绳(V型) ───
   ctx.strokeStyle='#334155';ctx.lineWidth=2.5;
-  ctx.beginPath();ctx.moveTo(Rx,Ry);ctx.lineTo(Hx,Hy);ctx.lineTo(Lx,Ly);ctx.stroke();
-
-  // 悬挂点(红色)
-  dot(ctx,Lx,Ly,9,'#ef4444');
-  dot(ctx,Rx,Ry,9,'#ef4444');
-
-  // 挂钩(绿色)+重物
+  ctx.beginPath();ctx.moveTo(Bx,By);ctx.lineTo(Hx,Hy);ctx.lineTo(Ax,Ay);ctx.stroke();
+  // 挂钩+重物
   dot(ctx,Hx,Hy,10,GRN);
   const bw=26,bh=18;
   ctx.fillStyle=BL;ctx.strokeStyle='#1e3a5f';ctx.lineWidth=2;
   ctx.fillRect(Hx-bw/2,Hy+10,bw,bh);ctx.strokeRect(Hx-bw/2,Hy+10,bw,bh);
 
-  // ─── 力 T₁ 和 T₂(沿绳方向，从挂钩指向悬挂点) ───
-  const T_val=MG/(2*Math.cos(t));
-  const Tsc=14, Tpx=Math.min(T_val*Tsc,180);
-  const d1x=Lx-Hx,d1y=Ly-Hy,d1l=Math.hypot(d1x,d1y);
+  // ─── 悬点(红色大圆,可拖) ───
+  dot(ctx,Ax,Ay,10,'#ef4444');
+  dot(ctx,Bx,By,10,'#ef4444');
+
+  // ─── T₁,T₂ ───
+  const d1x=Ax-Hx,d1y=Ay-Hy,d1l=Math.hypot(d1x,d1y);
+  const d2x=Bx-Hx,d2y=By-Hy,d2l=Math.hypot(d2x,d2y);
+  // θ = 等角 = arctan(hk.xh / (hk.yh - hL))
+  // T = mg/(2cosθ)
+  const cosTh=(hk.yh-hL)/Math.hypot(hk.xh,hk.yh-hL);
+  const T_val=MG/(2*Math.max(cosTh,.02));
+  const Tsc=14,Tpx=Math.min(T_val*Tsc,180);
   arrow(ctx,Hx,Hy,Hx+d1x/Math.max(d1l,.01)*Tpx,Hy+d1y/Math.max(d1l,.01)*Tpx,TR,3.5,'T₁');
-  const d2x=Rx-Hx,d2y=Ry-Hy,d2l=Math.hypot(d2x,d2y);
   arrow(ctx,Hx,Hy,Hx+d2x/Math.max(d2l,.01)*Tpx,Hy+d2y/Math.max(d2l,.01)*Tpx,TR,3.5,'T₂');
 
-  // ─── 平行四边形定则! ───
-  // T₁末端A, T₂末端B, 第四顶点C = A+T₂_vec = hook+T₁+T₂
-  const Ax=Hx+d1x/Math.max(d1l,.01)*Tpx, Ay=Hy+d1y/Math.max(d1l,.01)*Tpx;
-  const Bx=Hx+d2x/Math.max(d2l,.01)*Tpx, By=Hy+d2y/Math.max(d2l,.01)*Tpx;
-  const T1vx=Ax-Hx,T1vy=Ay-Hy, T2vx=Bx-Hx,T2vy=By-Hy;
-  const Cx=Ax+T2vx, Cy=Ay+T2vy; // 第四顶点
-  // 验证: Cx,Cy = Hx+T1vx+T2vx, Hy+T1vy+T2vy → 即 hook + T₁ + T₂
+  // ─── 平行四边形 ───
+  const T1x=d1x/Math.max(d1l,.01)*Tpx,T1y=d1y/Math.max(d1l,.01)*Tpx;
+  const T2x=d2x/Math.max(d2l,.01)*Tpx,T2y=d2y/Math.max(d2l,.01)*Tpx;
+  const CAx=Hx+T1x,CAy=Hy+T1y;
+  const CBx=Hx+T2x,CBy=Hy+T2y;
+  const CCx=CAx+T2x,CCy=CAy+T2y; // 第四顶点
 
-  // 画完整平行四边形(虚线)
-  dashedLine(ctx,Hx,Hy,Ax,Ay,AMBER,1.5);     // 边1: hook → A (=T₁)
-  dashedLine(ctx,Ax,Ay,Cx,Cy,AMBER,1.5);     // 边2: A → C (=T₂平移)
-  dashedLine(ctx,Hx,Hy,Bx,By,AMBER,1.5);     // 边3: hook → B (=T₂)
-  dashedLine(ctx,Bx,By,Cx,Cy,AMBER,1.5);     // 边4: B → C (=T₁平移)
-
-  // 对角线 T₁+T₂ (绿色，竖直向上)
-  arrow(ctx,Hx,Hy,Cx,Cy,GRN,4,'T₁+T₂');
-  // 在对角线终点标注：= mg 竖直向上
+  dash(ctx,Hx,Hy,CAx,CAy,AMB,1.5);dash(ctx,CAx,CAy,CCx,CCy,AMB,1.5);
+  dash(ctx,Hx,Hy,CBx,CBy,AMB,1.5);dash(ctx,CBx,CBy,CCx,CCy,AMB,1.5);
+  arrow(ctx,Hx,Hy,CCx,CCy,GRN,4,'T₁+T₂');
   ctx.fillStyle=GRN;ctx.font='bold 13px "Microsoft YaHei"';ctx.textAlign='left';
-  ctx.fillText('= −mg',Cx+10,Cy-6);
+  ctx.fillText('=−mg',CCx+10,CCy-6);
 
-  // ─── mg 重力(向下) ───
+  // ─── mg ───
   const Gpx=MG*Tsc;
   arrow(ctx,Hx,Hy+bh+10,Hx,Hy+bh+10+Gpx,BL,4,'mg');
 
-  // ─── θ 标注 ───
-  ctx.strokeStyle=GREY;ctx.lineWidth=1.5;
-  ctx.setLineDash([3,3]);
-  ctx.beginPath();ctx.moveTo(Hx,Hy-60);ctx.lineTo(Hx,Hy+25);ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.beginPath();ctx.arc(Hx,Hy,40,-Math.PI/2-t,-Math.PI/2+t);ctx.stroke();
-  ctx.fillStyle=GREY;ctx.font='bold 14px "Microsoft YaHei"';ctx.textAlign='center';
-  ctx.fillText('θ',Hx,Hy-44);
-  // 右边也标θ
-  ctx.beginPath();ctx.arc(Hx,Hy,52,-Math.PI/2,-Math.PI/2+t);ctx.stroke();
-  ctx.fillText('θ',Hx+30,Hy-30);
+  // ─── θ ───
+  ctx.strokeStyle=GRAY;ctx.lineWidth=1.5;
+  ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(Hx,Hy-65);ctx.lineTo(Hx,Hy+25);ctx.stroke();ctx.setLineDash([]);
+  ctx.beginPath();ctx.arc(Hx,Hy,42,-Math.PI/2-t,-Math.PI/2+t);ctx.stroke();
+  ctx.fillStyle=GRAY;ctx.font='bold 14px "Microsoft YaHei"';ctx.textAlign='center';
+  ctx.fillText('θ',Hx,Hy-46);
+  ctx.beginPath();ctx.arc(Hx,Hy,54,-Math.PI/2,-Math.PI/2+t);ctx.stroke();
+  ctx.fillText('θ',Hx+32,Hy-32);
 
-  // ─── x_B / y_A 标注 ───
-  ctx.fillStyle='#1f2937';ctx.font='bold 13px "Microsoft YaHei"';
-  ctx.strokeStyle='#93c5fd';ctx.lineWidth=1;ctx.setLineDash([4,3]);
-  ctx.beginPath();ctx.moveTo(ox,oy-22);ctx.lineTo(Rx,oy-22);ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillText('x_B',(ox+Rx)/2-10,oy-28);
-  ctx.strokeStyle='#93c5fd';ctx.lineWidth=1;ctx.setLineDash([4,3]);
-  ctx.beginPath();ctx.moveTo(ox-30,oy);ctx.lineTo(ox-30,Ly);ctx.stroke();
-  ctx.setLineDash([]);ctx.textAlign='right';
-  ctx.fillText('y_A',ox-38,(oy+Ly)/2+4);
-  ctx.textAlign='left';
-
-  // ─── 公式(右上) ───
-  ctx.fillStyle=BL;ctx.font='bold 14px "Microsoft YaHei"';ctx.textAlign='left';
-  ctx.fillText('光滑挂钩 ⇒ T₁ = T₂',W-260,25);
-  ctx.fillText('平衡 ⇒ 2T·cosθ = mg',W-260,48);
-  ctx.fillText('绳长 L² = x_B² + 4y_A²',W-260,71);
-  ctx.fillStyle=GRN;ctx.font='bold 14px "Microsoft YaHei"';
-  ctx.fillText('平行四边形 ⇒ T₁+T₂=−mg',W-260,94);
-
-  // 更新数据卡
-  document.getElementById('dT').textContent='T = '+T_val.toFixed(2)+' N';
-  document.getElementById('dCos').textContent='cosθ = '+Math.cos(t).toFixed(3);
-  document.getElementById('dPar').textContent='合力 = '+MG.toFixed(1)+' N = mg';
-  document.getElementById('dPos').textContent='θ='+tDeg.toFixed(1)+'°  x_B='+xB.toFixed(0)+'  y_A='+yA.toFixed(0);
+  // 更新数据
+  document.getElementById('dT').textContent='T='+T_val.toFixed(2)+'N';
+  document.getElementById('dCos').textContent='cosθ='+cosTh.toFixed(3);
+  document.getElementById('dPar').textContent='合力='+MG.toFixed(1)+'N=mg';
+  document.getElementById('dPos').textContent='θ='+tDeg.toFixed(1)+'°h='+(hL+hR)/2+'+('+(hyBase-oy).toFixed(0)+')d='+(-hL+hyBase).toFixed(0);
 }
 
 function tick(now){
-  if(!lt)lt=now;
-  const dt=(now-lt)/1000;lt=now;
-  if(playing){
-    theta+=dt*22*speed*dir;
-    if(theta>=80){theta=80;dir=-1}else if(theta<=8){theta=8;dir=1}
-    const s=document.getElementById('thetaSlider');
-    s.value=theta;document.getElementById('thetaDisp').textContent=theta.toFixed(1)+'°';
-    s.style.setProperty('--p',((theta-8)/72*100)+'%');
-    draw(theta);
-  }
+  if(!lt)lt=now;const dt=(now-lt)/1000;lt=now;
+  if(playing){theta+=dt*18*speed*dir;if(theta>=78){theta=78;dir=-1}else if(theta<=10){theta=10;dir=1}
+  const s=document.getElementById('thetaSlider');s.value=theta;s.style.setProperty('--p',((theta-10)/68*100)+'%');
+  document.getElementById('thetaDisp').textContent=theta.toFixed(1)+'°';draw(theta)}
   animId=requestAnimationFrame(tick);
 }
 
+function toCanvas(cv,e){const r=cv.getBoundingClientRect();return{x:e.offsetX*cv.getAttribute('width')/r.width,y:e.offsetY*cv.getAttribute('height')/r.height}}
+
 window.addEventListener('load',()=>{
+  const cv=document.getElementById('cv'),ox=cv.clientWidth*.20,oy=cv.clientHeight*.08;
+  // 初始: hL = hR = 由θ算出
+  hL=hR=L*Math.cos(theta*Math.PI/180)/2+30;
   draw(theta);
+
+  // 拖拽
+  cv.addEventListener('mousedown',e=>{
+    const p=toCanvas(cv,e);
+    const dL=Math.hypot(p.x-ox,p.y-(oy+hL));
+    const dR=Math.hypot(p.x-(ox+FRAME_W),p.y-(oy+hR));
+    if(dL<18){drag='L';dragStartY=p.y;dragStartH=hL;cv.style.cursor='grabbing'}
+    else if(dR<18){drag='R';dragStartY=p.y;dragStartH=hR;cv.style.cursor='grabbing'}
+  });
+  cv.addEventListener('mousemove',e=>{
+    if(!drag)return;
+    const p=toCanvas(cv,e);
+    const newH=Math.max(20,Math.min(dragStartH+(p.y-dragStartY),350));
+    if(drag==='L')hL=newH;else hR=newH;
+    // 保持对称(两边一起动)
+    hL=hR=Math.round((hL+hR)/2);
+    // 重算θ
+    const avgH=(hL+hR)/2;
+    theta=Math.atan2(FRAME_W/4, avgH-FRAME_W/4)*180/Math.PI;
+    theta=Math.max(10,Math.min(78,theta));
+    const s=document.getElementById('thetaSlider');s.value=theta;
+    s.style.setProperty('--p',((theta-10)/68*100)+'%');
+    document.getElementById('thetaDisp').textContent=theta.toFixed(1)+'°';
+    draw(theta);
+  });
+  cv.addEventListener('mouseup',()=>{drag=null;cv.style.cursor='default'});
+  cv.addEventListener('mouseleave',()=>{drag=null;cv.style.cursor='default'});
+  cv.addEventListener('mousemove',e=>{if(drag)return;const p=toCanvas(cv,e);
+    const dL=Math.hypot(p.x-ox,p.y-(oy+hL)),dR=Math.hypot(p.x-(ox+FRAME_W),p.y-(oy+hR));
+    cv.style.cursor=(dL<18||dR<18)?'grab':'default'});
+
+  // 滑块
   const s=document.getElementById('thetaSlider');
   s.addEventListener('input',e=>{
     theta=parseFloat(e.target.value);
     document.getElementById('thetaDisp').textContent=theta.toFixed(1)+'°';
-    s.style.setProperty('--p',((theta-8)/72*100)+'%');
+    s.style.setProperty('--p',((theta-10)/68*100)+'%');
+    // 更新h
+    const t=theta*Math.PI/180;hL=hR=L*Math.cos(t)/2+30;
     draw(theta);
   });
-  document.getElementById('playBtn').addEventListener('click',()=>{
-    playing=!playing;document.getElementById('playBtn').textContent=playing?'⏸ 暂停':'▶ 播放';
-  });
-  document.getElementById('resetBtn').addEventListener('click',()=>{
-    theta=45;playing=false;dir=1;
-    s.value=45;document.getElementById('thetaDisp').textContent='45.0°';
-    s.style.setProperty('--p',(37/72*100)+'%');
-    document.getElementById('playBtn').textContent='▶ 播放';
-    draw(theta);
-  });
-  document.querySelectorAll('[data-spd]').forEach(b=>{
-    b.addEventListener('click',()=>{
-      speed=parseFloat(b.dataset.spd);
-      document.querySelectorAll('[data-spd]').forEach(x=>x.classList.remove('active'));
-      b.classList.add('active');
-    });
-  });
+  document.getElementById('playBtn').addEventListener('click',()=>{playing=!playing;document.getElementById('playBtn').textContent=playing?'⏸暂停':'▶播放'});
+  document.getElementById('resetBtn').addEventListener('click',()=>{theta=45;playing=!1;dir=1;hL=hR=200;s.value=45;document.getElementById('thetaDisp').textContent='45.0°';s.style.setProperty('--p',(35/68*100)+'%');document.getElementById('playBtn').textContent='▶播放';draw(45)});
+  document.querySelectorAll('[data-spd]').forEach(b=>{b.addEventListener('click',()=>{speed=parseFloat(b.dataset.spd);document.querySelectorAll('[data-spd]').forEach(x=>x.classList.remove('active'));b.classList.add('active')})});
   animId=requestAnimationFrame(tick);
 });
 </script>

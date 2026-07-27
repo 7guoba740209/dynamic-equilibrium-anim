@@ -315,12 +315,33 @@ function drawScene1(thetaDeg) {
   // ── 球 ──
   dot(ctx, ballX, ballY, ballR, G_BLUE);
 
-  // ── 张力 T（沿绳方向，从球指向悬挂点）──
-  arrow(ctx, ballX, ballY, L_attach, topY, T_RED, 2.5, 'T');
-  arrow(ctx, ballX, ballY, R_attach, topY, T_RED, 2.5, 'T');
+  // ── 张力 T（从球沿绳方向向上，长度 ∝ 力的大小）──
+  // 绳是结构线（固定长度），力箭头独立绘制，长度正比于 T 值
+  const T_val = MG / (2 * Math.cos(theta));      // 2T·cosθ=mg → T
+  const T_scale = 14;  // px/N
+  const T_display = Math.min(T_val * T_scale, 160);  // 封顶 160px，防画出界
+  // 左绳方向
+  const Ldx1 = L_attach - ballX;  // 向左
+  const Ldy1 = topY - ballY;      // 向上
+  const Llen1 = Math.hypot(Ldx1, Ldy1);
+  // 力箭头只取 T_display 长度（可能小于绳全长）
+  arrow(ctx,
+    ballX, ballY,
+    ballX + (Ldx1/Llen1) * T_display, ballY + (Ldy1/Llen1) * T_display,
+    T_RED, 3, 'T');
+  // 右绳
+  const Rdx1 = R_attach - ballX;
+  const Rdy1 = topY - ballY;
+  const Rlen1 = Math.hypot(Rdx1, Rdy1);
+  arrow(ctx,
+    ballX, ballY,
+    ballX + (Rdx1/Rlen1) * T_display, ballY + (Rdy1/Rlen1) * T_display,
+    T_RED, 3, 'T');
 
-  // ── 重力 mg ──
-  arrow(ctx, ballX, ballY + ballR, ballX, ballY + ballR + 70, G_BLUE, 3, 'mg');
+  // ── 重力 mg（长度 ∝ mg）──
+  const G_scale = T_scale;
+  const G_display = MG * G_scale;
+  arrow(ctx, ballX, ballY + ballR, ballX, ballY + ballR + G_display, G_BLUE, 3.5, 'mg');
 
   // ── 角度标注（球心处，θ从竖直向两侧）──
   ctx.strokeStyle = GRAY;
@@ -363,7 +384,6 @@ function drawScene1(thetaDeg) {
 
   // ── 数值 ──
   const cosT = Math.cos(theta);
-  const T_val = MG / (2 * cosT);
   ctx.font = 'bold 13px "Courier New"';
   ctx.fillStyle = T_RED;
   ctx.fillText('T = ' + T_val.toFixed(2) + ' N', 20, 55);
@@ -430,25 +450,34 @@ function drawScene2(thetaDeg) {
   ctx.stroke();
   dot(ctx, attachX, attachY, 5, GRAY);
 
+  // T 方向单位向量（从球指向墙上固定点）
+  const Tdx = attachX - ballX;
+  const Tdy = attachY - ballY;
+  const Tlen = Math.hypot(Tdx, Tdy);
+  const T_ux = Tdx / Math.max(Tlen, 0.01);
+  const T_uy = Tdy / Math.max(Tlen, 0.01);
+
   // ── 球 ──
   dot(ctx, ballX, ballY, ballR, '#1f2937');
 
-  // ── T（沿绳指向墙上固定点，即向左上）──
-  // T 方向单位向量：从球到墙上固定点
-  const Tdx = attachX - ballX;   // 负值（向左）
-  const Tdy = attachY - ballY;   // 负值（向上）
-  const Tlen = Math.hypot(Tdx, Tdy);
-  const T_ux = Tdx / Tlen, T_uy = Tdy / Tlen;
-  // T 实际大小（牛顿），但用统一缩放画到屏幕上
-  const T_px = Tlen;  // 直接用绳长当显示长度
-  arrow(ctx, ballX, ballY, ballX + T_ux * T_px, ballY + T_uy * T_px, T_RED, 2.5, 'T');
+  // ── 力的数值 ──
+  const T_val = MG / Math.cos(theta);
+  const N_val = MG * Math.tan(theta);
+  const fScale = 10;  // px/N，统一缩放因子
 
-  // ── N（墙对球的水平向右支持力）──
-  const N_px = 90;
-  arrow(ctx, ballX, ballY, ballX + N_px, ballY, F_GREEN, 2.5, 'N');
+  // ── T（沿绳指向墙上固定点，即向左上，长度 ∝ T 值）──
+  const T_display = Math.min(T_val * fScale, 160);
+  arrow(ctx, ballX, ballY,
+    ballX + T_ux * T_display, ballY + T_uy * T_display,
+    T_RED, 3, 'T');
 
-  // ── G（竖直向下）──
-  arrow(ctx, ballX, ballY + ballR, ballX, ballY + ballR + 70, G_BLUE, 3, 'G');
+  // ── N（墙对球水平向右，长度 ∝ N 值）──
+  const N_display = Math.min(N_val * fScale, 160);
+  arrow(ctx, ballX, ballY, ballX + N_display, ballY, F_GREEN, 3, 'N');
+
+  // ── G（竖直向下，长度 ∝ mg = 10N 恒定）──
+  const G_display = MG * fScale;  // 100px
+  arrow(ctx, ballX, ballY + ballR, ballX, ballY + ballR + G_display, G_BLUE, 3.5, 'G');
 
   // ── θ 标注 ──
   ctx.strokeStyle = GRAY;
@@ -471,8 +500,6 @@ function drawScene2(thetaDeg) {
   ctx.setLineDash([]);
 
   // ── 数值 ──
-  const T_val = MG / Math.cos(theta);
-  const N_val = MG * Math.tan(theta);
   ctx.fillStyle = '#1f2937';
   ctx.font = '13px "Courier New"';
   ctx.textAlign = 'right';
@@ -588,20 +615,24 @@ function drawScene4(thetaDeg) {
   // ── 球 ──
   dot(ctx, cx, cy, 14, '#1f2937');
 
-  // ── G ──
-  arrow(ctx, cx, cy, cx, cy + 90, G_BLUE, 3, 'G');
+  // 力箭头缩放因子，与场景2一致
+  const fScale = 10;  // px/N
 
-  // ── F₁ ──
-  const F1_px = 100;
-  const F1x = cx + F1_px * Math.cos(F1_angle);
-  const F1y = cy + F1_px * Math.sin(F1_angle);
-  arrow(ctx, cx, cy, F1x, F1y, T_RED, 2.5, 'F₁');
+  // ── G（长度 ∝ mg，固定）──
+  const G_display = MG * fScale;  // 100px
+  arrow(ctx, cx, cy, cx, cy + G_display, G_BLUE, 3.5, 'G');
 
-  // ── F₂ ──
-  const F2_px = 100;
-  const F2x = cx + F2_px * Math.cos(F2_angle);
-  const F2y = cy + F2_px * Math.sin(F2_angle);
-  arrow(ctx, cx, cy, F2x, F2y, F_GREEN, 2.5, 'F₂');
+  // ── F₁（长度 ∝ |F₁|）──
+  const F1_display = Math.min(F1_mag * fScale, 150);
+  const F1x = cx + F1_display * Math.cos(F1_angle);
+  const F1y = cy + F1_display * Math.sin(F1_angle);
+  arrow(ctx, cx, cy, F1x, F1y, T_RED, 3, 'F₁');
+
+  // ── F₂（长度 ∝ |F₂|）──
+  const F2_display = Math.min(F2_mag * fScale, 150);
+  const F2x = cx + F2_display * Math.cos(F2_angle);
+  const F2y = cy + F2_display * Math.sin(F2_angle);
+  arrow(ctx, cx, cy, F2x, F2y, F_GREEN, 3, 'F₂');
 
   // ── 夹角标注 ──
   const arcR2 = 30;

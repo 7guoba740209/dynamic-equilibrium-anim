@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>传送带模型动画系统</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:"Microsoft YaHei","PingFang SC",sans-serif; background:#f4f6fb; color:#1f2937; display:flex; flex-direction:column; align-items:center; padding:16px; min-width:1200px; }
+  h1 { margin:0 0 4px; font-size:23px; color:#111827; }
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; margin-bottom:10px; }
+  .tab { padding:6px 14px; border-radius:6px; font-size:13px; cursor:pointer; background:#fff; border:1px solid #d1d5db; color:#374151; }
+  .tab.on { background:#2563eb; border-color:#2563eb; color:#fff; }
+  .tab.off { opacity:.45; cursor:not-allowed; }
+  .sub { color:#6b7280; font-size:13px; margin-bottom:12px; text-align:center; line-height:1.7; }
+  .grid { display:grid; grid-template-columns:724px 444px; gap:14px; align-items:start; }
+  .card { background:#fff; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,.06); padding:12px; }
+  #sceneH { width:700px; height:430px; display:block; }
+  #sceneI { width:700px; height:480px; display:block; }
+  #vt { width:420px; height:290px; display:block; }
+  .side { display:flex; flex-direction:column; gap:12px; }
+  .panel { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .box { background:#fff; border-radius:8px; padding:8px 10px; box-shadow:0 1px 5px rgba(0,0,0,.05); }
+  .box .v { font-size:19px; font-weight:700; color:#2563eb; }
+  .box .l { font-size:12px; color:#6b7280; }
+  .bar { background:#fff; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,.06); padding:12px 16px; margin-top:12px; display:flex; flex-direction:column; gap:10px; width:1180px; }
+  .row { display:flex; gap:12px; align-items:center; flex-wrap:nowrap; padding-bottom:9px; border-bottom:1px solid #f3f4f6; }
+  .row:last-child { padding-bottom:0; border-bottom:none; }
+  button { padding:8px 18px; border:none; border-radius:6px; background:#2563eb; color:#fff; font-size:14px; cursor:pointer; }
+  button:hover { background:#1d4ed8; }
+  button.sec { background:#64748b; }
+  button.sec:hover { background:#475569; }
+  .dirbtn { padding:7px 16px; border-radius:6px; font-size:14px; cursor:pointer; background:#fff; border:1px solid #d1d5db; color:#374151; }
+  .dirbtn:hover { border-color:#2563eb; color:#2563eb; }
+  .dirbtn.on { background:#2563eb; border-color:#2563eb; color:#fff; }
+  input[type=range] { width:190px; }
+  select { padding:4px 6px; font-size:13px; }
+  .pl { font-size:13px; color:#374151; }
+  .pv { font-size:13px; font-weight:700; color:#2563eb; min-width:56px; }
+  .dir { font-size:12px; color:#9a3412; }
+  .hint { width:1180px; margin-top:10px; padding:10px 14px; border-radius:8px; background:#fff7ed; border:1px solid #fb923c; color:#9a3412; font-size:14px; line-height:1.6; display:none; }
+  .hint.show { display:block; }
+  .legend { display:flex; gap:14px; flex-wrap:wrap; margin-top:8px; font-size:13px; justify-content:center; }
+  .li { display:flex; align-items:center; gap:5px; }
+  .sw { width:22px; height:4px; border-radius:2px; }
+  .note { width:1180px; margin-top:12px; font-size:13px; color:#4b5563; line-height:1.8; background:#fff; border-radius:12px; padding:14px 18px; box-shadow:0 1px 6px rgba(0,0,0,.05); }
+  .note b { color:#111827; }
+  .hidden { display:none !important; }
+</style>
+</head>
+<body>
+
+<h1>传送带模型动画系统</h1>
+<div class="tabs">
+  <div class="tab on" data-m="H">水平传送带</div>
+  <div class="tab" data-m="I">倾斜传送带</div>
+  <div class="tab off">划痕专题（规划中）</div>
+  <div class="tab off">功与能（规划中）</div>
+  <div class="tab off">板块组合（规划中）</div>
+  <div class="tab off">特殊变形（规划中）</div>
+</div>
+<div class="sub" id="sub"></div>
+
+<div class="grid">
+  <div class="card">
+    <svg id="sceneH" viewBox="0 0 700 430"></svg>
+    <svg id="sceneI" class="hidden" viewBox="0 0 700 480"></svg>
+    <!-- 全局唯一箭头 marker（常驻可见，避免多 SVG 内重复 id 导致被隐藏 SVG 的 marker 失效） -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+      <marker id="ar-red" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="8" refX="8" refY="4" orient="auto"><polygon points="0 0,10 4,0 8" fill="#E24B4A"/></marker>
+      <marker id="ar-blue" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="8" refX="8" refY="4" orient="auto"><polygon points="0 0,10 4,0 8" fill="#185FA5"/></marker>
+      <marker id="ar-yellow" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="8" refX="8" refY="4" orient="auto"><polygon points="0 0,10 4,0 8" fill="#EAB308"/></marker>
+      <marker id="ar-orange" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="8" refX="8" refY="4" orient="auto"><polygon points="0 0,10 4,0 8" fill="#EF9F27"/></marker>
+    </defs></svg>
+    <div class="legend">
+      <div class="li"><span class="sw" style="background:#E24B4A"></span>重力</div>
+      <div class="li"><span class="sw" style="background:#185FA5"></span>支持力</div>
+      <div class="li"><span class="sw" style="background:#EAB308"></span>摩擦力</div>
+      <div class="li"><span class="sw" style="background:#EF9F27"></span>速度</div>
+      <div class="li"><span class="sw" style="background:#7F77DD"></span>划痕</div>
+      <div class="li"><span class="sw" style="background:#9CA3AF"></span>带格线（1 m）</div>
+    </div>
+  </div>
+  <div class="side">
+    <div class="card"><svg id="vt" viewBox="0 0 420 290"></svg></div>
+    <div class="panel">
+      <div class="box"><div class="v" id="mV">0.0</div><div class="l">速度 v (m/s)</div></div>
+      <div class="box"><div class="v" id="mA">0.0</div><div class="l">加速度 a (m/s²)</div></div>
+      <div class="box"><div class="v" id="mF">0.0</div><div class="l">摩擦力 f (N)</div></div>
+      <div class="box"><div class="v" id="mX">0.00</div><div class="l">位置 X (距A，m)</div></div>
+      <div class="box"><div class="v" id="mD">0.00</div><div class="l">相对位移 Δx (m)</div></div>
+      <div class="box"><div class="v" id="mS">0.00</div><div class="l">划痕长度 (m)</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="bar">
+  <div class="row">
+    <button id="btnPlay">播放 ▶</button>
+    <button class="sec" id="btnReset">重置 ↺</button>
+  </div>
+  <div class="row">
+    <span class="pl">时间</span><input type="range" id="slider" min="0" max="1000" value="0">
+    <span class="pv" id="mT">0.00 s</span>
+    <span class="pl">倍速</span>
+    <select id="spd">
+      <option value="0.1" selected>0.1×</option>
+      <option value="0.25">0.25×</option>
+      <option value="0.5">0.5×</option>
+      <option value="1">1×</option>
+    </select>
+  </div>
+  <div class="row">
+    <span class="pl">初速度 v₀</span>
+    <button type="button" class="dirbtn on" id="btnFwd">正向 →（A端放上）</button>
+    <button type="button" class="dirbtn" id="btnRev">← 反向（B端滑上）</button>
+    <input type="range" id="pV0" min="0" max="12" step="0.5" value="0">
+    <span class="pv" id="lV0">0.0 m/s</span>
+    <span class="dir" id="dV0">（轻放）</span>
+  </div>
+  <div class="row">
+    <span class="pl">传送带长度 L</span><input type="range" id="pL" min="4" max="14" step="0.5" value="8"><span class="pv" id="lL">8.0 m</span>
+  </div>
+  <div class="row" id="thetaRow">
+    <span class="pl">倾角 θ</span><input type="range" id="pTH" min="10" max="45" step="1" value="37"><span class="pv" id="lTH">37°</span>
+  </div>
+  <div class="row hidden" id="dirRow">
+    <span class="pl">传送带转向</span>
+    <button type="button" class="dirbtn on" id="btnBfwd">顺时针 ↻（带向上行）</button>
+    <button type="button" class="dirbtn" id="btnBrev">↺ 逆时针（带向下行）</button>
+  </div>
+  <div class="row">
+    <span class="pl">传送带的速度</span><input type="range" id="pVB" min="1" max="8" step="0.5" value="4"><span class="pv" id="lVB">4.0 m/s</span>
+    <span class="pl">动摩擦因数 μ</span><input type="range" id="pMU" min="0.1" max="0.6" step="0.05" value="0.2"><span class="pv" id="lMU">0.20</span>
+  </div>
+</div>
+
+<div class="hint" id="hint"></div>
+
+<div class="note" id="note"></div>
+
+<script>
+var G = 10;
+var cur = 'H';
+var convDir = 1;
+var t = 0, playing = false, speed = 0.1, fired = [], last = 0;
+var slider = document.getElementById('slider');
+
+/* ===================== 通用绘图辅助 ===================== */
+function arr(x1,y1,x2,y2,c,w){
+  var id='ar-red';
+  if(c==='#185FA5') id='ar-blue';
+  else if(c==='#EAB308') id='ar-yellow';
+  else if(c==='#EF9F27') id='ar-orange';
+  return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+c+'" stroke-width="'+w+'" stroke-linecap="round" marker-end="url(#'+id+')"/>';
+}
+function arrL(x1,y1,x2,y2,c,w,lab){
+  var s=arr(x1,y1,x2,y2,c,w);
+  if(!lab) return s;
+  var dx=x2-x1, dy=y2-y1, L=Math.sqrt(dx*dx+dy*dy);
+  if(L<1){ dx=0; dy=-1; L=1; }
+  var ox=x2+dx/L*14, oy=y2+dy/L*14;
+  ox=Math.max(16,Math.min(684,ox)); oy=Math.max(18,Math.min(420,oy));
+  s+='<text x="'+ox.toFixed(1)+'" y="'+oy.toFixed(1)+'" font-size="15" font-weight="700" font-style="italic" fill="'+c+'" stroke="#FFFFFF" stroke-width="3.2" paint-order="stroke" stroke-linejoin="round" text-anchor="middle" dominant-baseline="central">'+lab+'</text>';
+  return s;
+}
+function defs(){
+  var M=[['ar-red','#E24B4A'],['ar-blue','#185FA5'],['ar-yellow','#EAB308'],['ar-orange','#EF9F27']];
+  var s='<defs>';
+  M.forEach(function(mk){
+    s+='<marker id="'+mk[0]+'" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="8" refX="8" refY="4" orient="auto"><polygon points="0 0,10 4,0 8" fill="'+mk[1]+'"/></marker>';
+  });
+  s+='</defs>';
+  return s;
+}
+function drawVT(m){
+  var S=m.S, P=m.P;
+  var s='', x0=52, x1=400, y0=22, y1=248;
+  var tMax=Math.max(S.tEnd,0.5);
+  var vMax=Math.max(P.v0,P.vb,1)*1.3, vMin=Math.min(0,P.v0)*1.15;
+  if(vMax-vMin<1) vMax=vMin+1;
+  function tx(tt){ return x0+(tt/tMax)*(x1-x0); }
+  function vy(vv){ return y1-((vv-vMin)/(vMax-vMin))*(y1-y0); }
+  s+='<line x1="'+x0+'" y1="'+y0+'" x2="'+x0+'" y2="'+y1+'" stroke="#888780" stroke-width="1"/>';
+  s+='<line x1="'+x0+'" y1="'+y1+'" x2="'+x1+'" y2="'+y1+'" stroke="#888780" stroke-width="1"/>';
+  s+='<text x="'+x1+'" y="'+(y0-8)+'" font-size="12" fill="#6B7280" text-anchor="end">t / s</text>';
+  s+='<text x="14" y="'+(y0+4)+'" font-size="12" fill="#6B7280">v</text>';
+  var i, gv, gy;
+  for(i=0;i<=4;i++){
+    gv=vMin+(vMax-vMin)*i/4; gy=vy(gv);
+    s+='<line x1="'+x0+'" y1="'+gy.toFixed(1)+'" x2="'+x1+'" y2="'+gy.toFixed(1)+'" stroke="#F3F4F6" stroke-width="1"/>';
+    s+='<text x="'+(x0-6)+'" y="'+(gy+4).toFixed(1)+'" font-size="11" fill="#9CA3AF" text-anchor="end">'+gv.toFixed(1)+'</text>';
+  }
+  if(vMin<-0.01) s+='<line x1="'+x0+'" y1="'+vy(0).toFixed(1)+'" x2="'+x1+'" y2="'+vy(0).toFixed(1)+'" stroke="#D1D5DB" stroke-width="1.5"/>';
+  for(i=0;i<=4;i++){ var gt=tMax*i/4, gx=tx(gt); s+='<text x="'+gx.toFixed(1)+'" y="'+(y1+16)+'" font-size="11" fill="#9CA3AF" text-anchor="middle">'+gt.toFixed(1)+'</text>'; }
+  var pts=[], N=160;
+  for(i=0;i<=N;i++){ var tt=S.tEnd*i/N, stt=m.state(tt); pts.push(tx(tt).toFixed(1)+','+vy(stt.v).toFixed(1)); }
+  s+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="#B5D4F4" stroke-width="2.5"/>';
+  var pd=[], M=120, tE2=Math.min(t,S.tEnd);
+  for(i=0;i<=M;i++){ var tt2=tE2*i/M, st2=m.state(tt2); pd.push(tx(tt2).toFixed(1)+','+vy(st2.v).toFixed(1)); }
+  if(pd.length>1) s+='<polyline points="'+pd.join(' ')+'" fill="none" stroke="#185FA5" stroke-width="2.5"/>';
+  s+='<line x1="'+x0+'" y1="'+vy(P.vb).toFixed(1)+'" x2="'+x1+'" y2="'+vy(P.vb).toFixed(1)+'" stroke="#6B7280" stroke-width="1.5" stroke-dasharray="5 4"/>';
+  s+='<text x="'+(x1-4)+'" y="'+(vy(P.vb)-6).toFixed(1)+'" font-size="11" fill="#6B7280" text-anchor="end">带速</text>';
+  var cur2=m.state(t);
+  s+='<circle cx="'+tx(t).toFixed(1)+'" cy="'+vy(cur2.v).toFixed(1)+'" r="5" fill="#185FA5"/>';
+  if(S.common){
+    s+='<line x1="'+tx(S.t1).toFixed(1)+'" y1="'+y0+'" x2="'+tx(S.t1).toFixed(1)+'" y2="'+y1+'" stroke="#E24B4A" stroke-width="1" stroke-dasharray="3 3"/>';
+    s+='<circle cx="'+tx(S.t1).toFixed(1)+'" cy="'+vy(P.vb).toFixed(1)+'" r="4" fill="#E24B4A"/>';
+    s+='<text x="'+(tx(S.t1)+6).toFixed(1)+'" y="'+(vy(P.vb)-8).toFixed(1)+'" font-size="11" fill="#A32D2D">共速 '+S.t1.toFixed(2)+' s</text>';
+  }
+  document.getElementById('vt').innerHTML=s;
+}
+function drawNums(m){
+  var st=m.state(t);
+  document.getElementById('mV').textContent=st.v.toFixed(2);
+  document.getElementById('mA').textContent=st.a.toFixed(2);
+  document.getElementById('mF').textContent=st.f.toFixed(2);
+  document.getElementById('mX').textContent=st.X.toFixed(2);
+  document.getElementById('mD').textContent=st.drel.toFixed(2);
+  document.getElementById('mS').textContent=st.scr.toFixed(2);
+  document.getElementById('mT').textContent=st.t.toFixed(2)+' s';
+}
+
+/* ===================== 模型 H：水平传送带 ===================== */
+var MH = {
+  PXM:72.5, basePXM:72.5, fitW:600, XA:60, XB:640, YB:200, R:24, FS:8, VS:10,
+  TOP:0, ARC:0, LOOP:0,
+  P:{m:1, L:8, v0:0, vb:4, mu:0.2},
+  v0mag:0, v0dir:1, S:null, barY:342,
+  init:function(){
+    this.PXM=Math.min(this.basePXM, this.fitW/this.P.L);
+    this.TOP=this.P.L*this.PXM; this.XB=this.XA+this.TOP;
+    this.ARC=Math.PI*this.R; this.LOOP=2*this.TOP+2*this.ARC;
+  },
+  pos:function(u){
+    var XA=this.XA, XB=this.XB, R=this.R, YB=this.YB, TOP=this.TOP, ARC=this.ARC, LOOP=this.LOOP;
+    var uu=((u%LOOP)+LOOP)%LOOP;
+    if(uu<TOP) return {x:XA+uu, y:YB, nx:0, ny:-1};
+    if(uu<TOP+ARC){ var a=(uu-TOP)/R, ang=-Math.PI/2+a; return {x:XB+R*Math.cos(ang), y:YB+R+R*Math.sin(ang), nx:Math.cos(ang), ny:Math.sin(ang)}; }
+    if(uu<TOP+ARC+TOP){ var d=uu-TOP-ARC; return {x:XB-d, y:YB+2*R, nx:0, ny:1}; }
+    var a2=(uu-TOP-ARC-TOP)/R, ang2=Math.PI/2+a2; return {x:XA+R*Math.cos(ang2), y:YB+R+R*Math.sin(ang2), nx:Math.cos(ang2), ny:Math.sin(ang2)};
+  },
+  solve:function(){
+    var ag=this.P.mu*G, L=this.P.L, v0=this.P.v0, vb=this.P.vb;
+    var X0=v0>=0?0:L;
+    if(Math.abs(v0-vb)<1e-9) return {a1:0, t1:0, X1:X0, tEnd:(L-X0)/vb, common:false, vEqual:true, X0:X0, exit:'B'};
+    var a1=(vb>v0?1:-1)*ag;
+    var t1=Math.abs(vb-v0)/ag;
+    var cands=[];
+    function roots(Bd){ var A=0.5*a1,B=v0,C=X0-Bd; if(Math.abs(A)<1e-12){var tt=(Bd-X0)/v0; if(tt>1e-9)cands.push(tt); return;} var disc=B*B-4*A*C; if(disc<0)return; var r1=(-B+Math.sqrt(disc))/(2*A),r2=(-B-Math.sqrt(disc))/(2*A); if(r1>1e-9)cands.push(r1); if(r2>1e-9)cands.push(r2); }
+    roots(0); roots(L);
+    var tb=cands.length?Math.min.apply(null,cands):Infinity;
+    if(tb<=t1+1e-12){ var xe=X0+v0*tb+0.5*a1*tb*tb; return {a1:a1, t1:t1, X1:null, tEnd:tb, common:false, vEqual:false, X0:X0, exit:(xe<=0.001?'A':'B')}; }
+    var X1=X0+v0*t1+0.5*a1*t1*t1;
+    return {a1:a1, t1:t1, X1:X1, tEnd:t1+(L-X1)/vb, common:true, vEqual:false, X0:X0, exit:'B'};
+  },
+  state:function(tt){
+    var S=this.S;
+    if(tt>=S.tEnd) tt=S.tEnd;
+    var v,a,X;
+    if(S.vEqual){ a=0; v=this.P.vb; X=S.X0+this.P.vb*tt; }
+    else if(!S.common){ a=S.a1; v=this.P.v0+S.a1*tt; X=S.X0+this.P.v0*tt+0.5*S.a1*tt*tt; }
+    else if(tt<S.t1){ a=S.a1; v=this.P.v0+S.a1*tt; X=S.X0+this.P.v0*tt+0.5*S.a1*tt*tt; }
+    else { a=0; v=this.P.vb; X=S.X1+this.P.vb*(tt-S.t1); }
+    var moving=tt<S.tEnd-1e-9;
+    var f=0;
+    if(moving && !S.vEqual && Math.abs(v-this.P.vb)>1e-9) f=(this.P.vb>v?1:-1)*this.P.mu*this.P.m*G;
+    var drel=X-S.X0-this.P.vb*tt;
+    return {t:tt, v:v, a:a, X:X, f:f, drel:drel, scr:Math.abs(drel), end:!moving};
+  },
+  evts:function(){
+    var S=this.S, e=[];
+    if(S.common && !S.vEqual) e.push({t:S.t1, msg:'共速！物块与传送带速度相同，摩擦力立即归零，此后一起匀速。'});
+    e.push({t:S.tEnd, msg:(S.exit==='A'?'物块冲过全程，从 A 端滑落。':'物块从 B 端离开传送带。')});
+    return e;
+  },
+  drawScene:function(tt){
+    var m=this, st=m.state(tt), s='';
+    var cyc=m.YB+m.R;
+    s+='<path d="M '+m.XA+' '+m.YB+' L '+m.XB+' '+m.YB+' A '+m.R+' '+m.R+' 0 0 1 '+m.XB+' '+(m.YB+2*m.R)+' L '+m.XA+' '+(m.YB+2*m.R)+' A '+m.R+' '+m.R+' 0 0 1 '+m.XA+' '+m.YB+' Z" fill="#E5E7EB" stroke="#9CA3AF" stroke-width="1.5"/>';
+    s+='<circle cx="'+m.XA+'" cy="'+cyc+'" r="'+(m.R-3)+'" fill="#F9FAFB" stroke="#B4B2A9" stroke-width="1"/>';
+    s+='<circle cx="'+m.XB+'" cy="'+cyc+'" r="'+(m.R-3)+'" fill="#F9FAFB" stroke="#B4B2A9" stroke-width="1"/>';
+    var rot=((m.P.vb*tt*m.PXM/m.R)*180/Math.PI)%360;
+    s+='<g transform="rotate('+rot.toFixed(1)+' '+m.XA+' '+cyc+')"><line x1="'+(m.XA-m.R+5)+'" y1="'+cyc+'" x2="'+(m.XA+m.R-5)+'" y2="'+cyc+'" stroke="#B4B2A9" stroke-width="2"/><line x1="'+m.XA+'" y1="'+(cyc-m.R+5)+'" x2="'+m.XA+'" y2="'+(cyc+m.R-5)+'" stroke="#B4B2A9" stroke-width="2"/></g>';
+    s+='<g transform="rotate('+rot.toFixed(1)+' '+m.XB+' '+cyc+')"><line x1="'+(m.XB-m.R+5)+'" y1="'+cyc+'" x2="'+(m.XB+m.R-5)+'" y2="'+cyc+'" stroke="#B4B2A9" stroke-width="2"/><line x1="'+m.XB+'" y1="'+(cyc-m.R+5)+'" x2="'+m.XB+'" y2="'+(cyc+m.R-5)+'" stroke="#B4B2A9" stroke-width="2"/></g>';
+    var k,u,p,p2;
+    for(k=-24;k<=24;k++){ u=m.PXM*(m.S.X0+k+m.P.vb*tt); p=m.pos(u); s+='<line x1="'+p.x.toFixed(1)+'" y1="'+p.y.toFixed(1)+'" x2="'+(p.x+p.nx*7).toFixed(1)+'" y2="'+(p.y+p.ny*7).toFixed(1)+'" stroke="#9CA3AF" stroke-width="1.5"/>'; }
+    var sA=Math.min(0,st.drel), sB=Math.max(0,st.drel), len=st.scr*m.PXM;
+    if(len>1){
+      var uA=m.PXM*(m.S.X0+sA+m.P.vb*tt);
+      var drawLen=Math.min(len,m.LOOP-2);
+      var N=Math.max(2,Math.ceil(drawLen/6)), pts=[];
+      for(k=0;k<=N;k++){ p2=m.pos(uA+drawLen*k/N); pts.push(p2.x.toFixed(1)+','+p2.y.toFixed(1)); }
+      s+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="#7F77DD" stroke-width="7" stroke-linejoin="round" opacity="0.9"/>';
+    }
+    var bx=m.XA+Math.max(-0.35,Math.min(m.P.L+0.35,st.X))*m.PXM, by=m.YB-24;
+    s+='<rect x="'+(bx-15)+'" y="'+by+'" width="30" height="24" fill="#378ADD" stroke="#185FA5" stroke-width="1" rx="2"/>';
+    var cx=bx, cyy=by+12;
+    s+=arrL(cx,cyy,cx,cyy+m.P.m*G*m.FS,'#E24B4A',2.5,'G');
+    s+=arrL(cx,cyy,cx,cyy-m.P.m*G*m.FS,'#185FA5',2.5,'N');
+    if(Math.abs(st.f)>1e-6){ var fl=Math.abs(st.f)*m.FS, fd=st.f>0?1:-1; s+=arrL(cx,cyy,cx+fd*fl,cyy,'#EAB308',2.5,'f'); }
+    if(Math.abs(st.v)>0.05){ var vl=Math.abs(st.v)*m.VS, vd=st.v>0?1:-1; var nlen=m.P.m*G*m.FS; var voff=nlen+36, uoff=24; var vsx=cx-vd*uoff, vsy=cyy-voff; s+=arrL(vsx,vsy, vsx+vd*vl, vsy, '#EF9F27',2.5,'v'); }
+    s+='<text x="'+(m.XA-18)+'" y="'+(m.YB-12)+'" font-size="13" fill="#5F5E5A">A</text>';
+    s+='<text x="'+(m.XB+8)+'" y="'+(m.YB-12)+'" font-size="13" fill="#5F5E5A">B</text>';
+    drawBar(m,s,st);
+    document.getElementById('sceneH').innerHTML=s;
+  }
+};
+
+/* ===================== 模型 I：倾斜传送带 ===================== */
+var MI = {
+  PXM:42, basePXM:42, fitW:420, XA:110, XB:0, YB:360, R:18, FS:8, VS:8,
+  TOP:420, ARC:0, LOOP:0,
+  P:{m:1, L:10, v0:12, vb:4, mu:0.25, theta:37},
+  v0mag:12, v0dir:1, S:null, barY:430,
+  init:function(){ this.PXM=Math.min(this.basePXM, this.fitW/this.P.L); this.TOP=this.P.L*this.PXM; this.XB=this.XA+this.TOP; this.ARC=Math.PI*this.R; this.LOOP=2*this.TOP+2*this.ARC; },
+  rotI:function(lx,ly,th){ var dx=lx-this.XA, dy=ly-this.YB, c=Math.cos(th), s=Math.sin(th); return {x:this.XA+dx*c+dy*s, y:this.YB-dx*s+dy*c}; },
+  rotV:function(vx,vy,th){ var c=Math.cos(th), s=Math.sin(th); return {x:vx*c+vy*s, y:-vx*s+vy*c}; },
+  pos_local:function(u){
+    var XA=this.XA, XB=this.XB, R=this.R, YB=this.YB, TOP=this.TOP, ARC=this.ARC;
+    var uu=((u%this.LOOP)+this.LOOP)%this.LOOP;
+    if(uu<TOP) return {x:XA+uu, y:YB, nx:0, ny:-1};
+    if(uu<TOP+ARC){ var a=(uu-TOP)/R, ang=-Math.PI/2+a; return {x:XB+R*Math.cos(ang), y:YB+R+R*Math.sin(ang), nx:Math.cos(ang), ny:Math.sin(ang)}; }
+    if(uu<TOP+ARC+TOP){ var d=uu-TOP-ARC; return {x:XB-d, y:YB+2*R, nx:0, ny:1}; }
+    var a2=(uu-TOP-ARC-TOP)/R, ang2=Math.PI/2+a2; return {x:XA+R*Math.cos(ang2), y:YB+R+R*Math.sin(ang2), nx:Math.cos(ang2), ny:Math.sin(ang2)};
+  },
+  pos:function(u,th){
+    var p=this.pos_local(u), q=this.rotI(p.x,p.y,th), n=this.rotV(p.nx,p.ny,th);
+    return {x:q.x, y:q.y, nx:n.x, ny:n.y};
+  },
+  solve:function(){
+    var P=this.P, th=P.theta*Math.PI/180, sinT=Math.sin(th), cosT=Math.cos(th);
+    var ag=P.mu*G*cosT, gpar=G*sinT;
+    var X0=P.v0>=0?0:P.L;
+    var seg0v=P.v0, a1, f1;
+    var w0=P.v0-P.vb;
+    a1=(-ag*Math.sign(w0))-gpar;
+    f1=(-ag*Math.sign(w0))*P.m;   // 沿带摩擦（正=向上）
+    var t1=Infinity;
+    if(Math.abs(a1)>1e-12){ var tt=(P.vb-P.v0)/a1; if(tt>1e-9) t1=tt; }
+    function rootsEnd(x_target){ var A=0.5*a1,B=P.v0,C=X0-x_target; if(Math.abs(A)<1e-12){ if(Math.abs(B)>1e-12){var r=(x_target-X0)/P.v0; if(r>1e-9)return [r];} return [];} var disc=B*B-4*A*C; if(disc<0)return []; var r1=(-B+Math.sqrt(disc))/(2*A),r2=(-B-Math.sqrt(disc))/(2*A); var out=[]; if(r1>1e-9)out.push(r1); if(r2>1e-9)out.push(r2); return out; }
+    var ends=rootsEnd(0).concat(rootsEnd(P.L));
+    var te=ends.length?Math.min.apply(null,ends):Infinity;
+    var S={P:P, th:th, sinT:sinT, cosT:cosT, ag:ag, gpar:gpar, X0:X0, t1:Infinity, X1:null, common:false, vEqual:Math.abs(P.v0-P.vb)<1e-9, tEnd:te, exit:te<Infinity?((X0+P.v0*te+0.5*a1*te*te)<=0.001?'A':'B'):'B', segs:[], drel1:0};
+    if(S.vEqual){
+      if(gpar<=P.mu*G*cosT){ S.tEnd=Math.abs((P.L-X0)/P.vb); S.segs=[{t0:0,v0:P.vb,a:0,x0:X0,f:P.m*gpar}]; S.common=true; S.t1=0; S.X1=X0; S.drel1=0; return S; }
+      var a2e=ag-gpar, f2e=P.m*ag;
+      var e2e=rootsEnd(0).concat(rootsEnd(P.L));
+      var te2e=e2e.length?Math.min.apply(null,e2e):Infinity;
+      var xe2e=X0+P.vb*te2e+0.5*a2e*te2e*te2e;
+      S.segs=[{t0:0,v0:P.vb,a:a2e,x0:X0,f:f2e}]; S.tEnd=te2e; S.exit=(xe2e<=0.001)?'A':'B'; return S;
+    }
+    S.segs=[{t0:0,v0:P.v0,a:a1,x0:X0,f:f1}];
+    if(t1<te-1e-9){
+      var x1=X0+P.v0*t1+0.5*a1*t1*t1;
+      S.t1=t1; S.X1=x1; S.drel1=x1-X0-P.vb*t1;
+      if(gpar<=P.mu*G*cosT){
+        S.common=true;
+        var fst=P.m*gpar;
+        var t2=(P.L-x1)/P.vb;
+        S.segs.push({t0:t1,v0:P.vb,a:0,x0:x1,f:fst});
+        S.tEnd=t1+t2; S.exit=(x1+P.vb*t2>=P.L-1e-9)?'B':'A';
+      } else {
+        S.common=true;
+        var a2=ag-gpar, f2=P.m*ag;
+        S.segs.push({t0:t1,v0:P.vb,a:a2,x0:x1,f:f2});
+        var e2=rootsEnd(0).concat(rootsEnd(P.L));
+        var te2=e2.length?Math.min.apply(null,e2):Infinity;
+        S.tEnd=t1+te2;
+        var xe=x1+P.vb*te2+0.5*a2*te2*te2;
+        S.exit=(xe<=0.001)?'A':'B';
+      }
+    } else {
+      S.tEnd=te;
+    }
+    return S;
+  },
+  state:function(tt){
+    var S=this.S;
+    if(tt>=S.tEnd) tt=S.tEnd;
+    var seg=S.segs[0];
+    for(var i=0;i<S.segs.length;i++){ if(tt>=S.segs[i].t0-1e-9) seg=S.segs[i]; }
+    var dt=tt-seg.t0;
+    var v=seg.v0+seg.a*dt;
+    var X=seg.x0+seg.v0*dt+0.5*seg.a*dt*dt;
+    var f=seg.f;
+    var drel=X-S.X0-this.P.vb*tt;
+    var scr;
+    if(S.common && tt>=S.t1-1e-9) scr=Math.abs(S.drel1);
+    else scr=Math.abs(drel);
+    var moving=tt<S.tEnd-1e-9;
+    return {t:tt, v:v, a:seg.a, X:X, f:moving?f:0, drel:drel, scr:scr, end:!moving};
+  },
+  evts:function(){
+    var S=this.S, e=[];
+    if(S.common && !S.vEqual) e.push({t:S.t1, msg:'共速！物块与传送带速度相同。此时看 μ 与 tanθ：若 μ≥tanθ，静摩擦托住一起匀速；若 μ<tanθ，摩擦不足以平衡重力下滑分力，物块将反向加速下滑，摩擦力方向翻转。'});
+    e.push({t:S.tEnd, msg:(S.exit==='A'?'物块滑回 A 端（底端）离开传送带。':'物块到达 B 端（顶端）离开传送带。')});
+    return e;
+  },
+  drawScene:function(tt){
+    var m=this, st=m.state(tt), th=m.P.theta*Math.PI/180, s='';
+    var i,u,p,p2;
+    var lp=[]; for(i=0;i<=240;i++){ p=m.pos(m.LOOP*i/240,th); lp.push(p.x.toFixed(1)+','+p.y.toFixed(1)); }
+    s+='<polygon points="'+lp.join(' ')+'" fill="#E5E7EB" stroke="#9CA3AF" stroke-width="1.5"/>';
+    var cA=m.rotI(m.XA, m.YB+m.R, th), cB=m.rotI(m.XB, m.YB+m.R, th);
+    s+='<circle cx="'+cA.x.toFixed(1)+'" cy="'+cA.y.toFixed(1)+'" r="'+(m.R-3)+'" fill="#F9FAFB" stroke="#B4B2A9" stroke-width="1"/>';
+    s+='<circle cx="'+cB.x.toFixed(1)+'" cy="'+cB.y.toFixed(1)+'" r="'+(m.R-3)+'" fill="#F9FAFB" stroke="#B4B2A9" stroke-width="1"/>';
+    var rot=((m.P.vb*tt*m.PXM/m.R)*180/Math.PI)%360;
+    s+='<g transform="rotate('+rot.toFixed(1)+' '+cA.x.toFixed(1)+' '+cA.y.toFixed(1)+')"><line x1="'+(cA.x-m.R+5).toFixed(1)+'" y1="'+cA.y.toFixed(1)+'" x2="'+(cA.x+m.R-5).toFixed(1)+'" y2="'+cA.y.toFixed(1)+'" stroke="#B4B2A9" stroke-width="2"/><line x1="'+cA.x.toFixed(1)+'" y1="'+(cA.y-m.R+5).toFixed(1)+'" x2="'+cA.x+'" y2="'+(cA.y+m.R-5).toFixed(1)+'" stroke="#B4B2A9" stroke-width="2"/></g>';
+    s+='<g transform="rotate('+rot.toFixed(1)+' '+cB.x.toFixed(1)+' '+cB.y.toFixed(1)+')"><line x1="'+(cB.x-m.R+5).toFixed(1)+'" y1="'+cB.y.toFixed(1)+'" x2="'+(cB.x+m.R-5).toFixed(1)+'" y2="'+cB.y.toFixed(1)+'" stroke="#B4B2A9" stroke-width="2"/><line x1="'+cB.x.toFixed(1)+'" y1="'+(cB.y-m.R+5).toFixed(1)+'" x2="'+cB.x+'" y2="'+(cB.y+m.R-5).toFixed(1)+'" stroke="#B4B2A9" stroke-width="2"/></g>';
+    for(i=-30;i<=30;i++){ u=m.PXM*(m.S.X0+i+m.P.vb*tt); p=m.pos(u,th); s+='<line x1="'+p.x.toFixed(1)+'" y1="'+p.y.toFixed(1)+'" x2="'+(p.x+p.nx*7).toFixed(1)+'" y2="'+(p.y+p.ny*7).toFixed(1)+'" stroke="#9CA3AF" stroke-width="1.5"/>'; }
+    var sA=Math.min(0,st.drel), sB=Math.max(0,st.drel), len=st.scr*m.PXM;
+    if(len>1){
+      var uA=m.PXM*(m.S.X0+sA+m.P.vb*tt);
+      var drawLen=Math.min(len,m.LOOP-2);
+      var N=Math.max(2,Math.ceil(drawLen/6)), pts=[];
+      for(i=0;i<=N;i++){ p2=m.pos(uA+drawLen*i/N,th); pts.push(p2.x.toFixed(1)+','+p2.y.toFixed(1)); }
+      s+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="#7F77DD" stroke-width="6" stroke-linejoin="round" opacity="0.9"/>';
+    }
+    var localU=m.PXM*st.X;
+    var contact=m.rotI(m.XA+localU, m.YB, th);
+    var cosT=Math.cos(th), sinT=Math.sin(th);
+    var ub=m.rotV(1,0,th), nb=m.rotV(0,-1,th);           // ub：沿带向上；nb：垂直带面指向“带上方”
+    var half=14, cphi=-th;
+    // 参照 v3：方块中心沿法向抬高 half，使方块稳置于带面上方（不陷入带内）
+    var cx=contact.x+nb.x*half, cy=contact.y+nb.y*half;
+    var cs=Math.cos(cphi), sn=Math.sin(cphi);
+    function corner(dx,dy){ return (cx+(dx*cs-dy*sn)).toFixed(1)+','+(cy+(dx*sn+dy*cs)).toFixed(1); }
+    var corners=[corner(-half,-half),corner(half,-half),corner(half,half),corner(-half,half)].join(' ');
+    s+='<polygon points="'+corners+'" fill="#378ADD" stroke="#185FA5" stroke-width="1"/>';
+    // 三力从方块中心发出：重力竖直向下，支持力垂直带面向上，摩擦力沿带
+    s+=arrL(cx,cy, cx, cy+m.P.m*G*m.FS, '#E24B4A',2.5,'G');                              // 重力 G=mg
+    s+=arrL(cx,cy, cx+nb.x*m.P.m*G*cosT*m.FS, cy+nb.y*m.P.m*G*cosT*m.FS, '#185FA5',2.5,'N');  // 支持力 N=mg·cosθ
+    if(Math.abs(st.f)>1e-6){ var fl=Math.abs(st.f)*m.FS, fd=st.f>0?1:-1; s+=arrL(cx,cy, cx+fd*ub.x*fl, cy+fd*ub.y*fl, '#EAB308',2.5,'f'); }
+    if(Math.abs(st.v)>0.05){ var vl=Math.abs(st.v)*m.VS, vd=st.v>0?1:-1; var nlen=m.P.m*G*cosT*m.FS; var voff=nlen+16, uoff=46; var vsx=cx+nb.x*voff+ub.x*uoff, vsy=cy+nb.y*voff+ub.y*uoff; s+=arrL(vsx,vsy, vsx+vd*ub.x*vl, vsy+vd*ub.y*vl, '#EF9F27',2.5,'v'); }
+    var lA=m.rotI(m.XA,m.YB,th), lB=m.rotI(m.XB,m.YB,th);
+    s+='<text x="'+(lA.x-22).toFixed(1)+'" y="'+(lA.y+12).toFixed(1)+'" font-size="13" fill="#5F5E5A">A</text>';
+    s+='<text x="'+(lB.x+12).toFixed(1)+'" y="'+(lB.y-10).toFixed(1)+'" font-size="13" fill="#5F5E5A">B</text>';
+    var arcR=46;
+    s+='<path d="M '+(lA.x+arcR)+' '+lA.y+' A '+arcR+' '+arcR+' 0 0 0 '+lA.x.toFixed(1)+' '+(lA.y-arcR).toFixed(1)+'" fill="none" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="3,2"/>';
+    s+='<text x="'+(lA.x+arcR+6).toFixed(1)+'" y="'+(lA.y-arcR/2).toFixed(1)+'" font-size="12" fill="#64748b">θ='+m.P.theta+'°</text>';
+    drawBar(m,s,st);
+    document.getElementById('sceneI').innerHTML=s;
+  }
+};
+
+function drawBar(m,s,st){
+  var YB=m.barY, XA=m.XA, XB=m.XB, k;
+  s+='<text x="350" y="'+(YB-26)+'" font-size="13" fill="#5F5E5A" text-anchor="middle">带材料坐标 · 相对位移条（单位 m）</text>';
+  s+='<line x1="'+XA+'" y1="'+YB+'" x2="'+XB+'" y2="'+YB+'" stroke="#D1D5DB" stroke-width="1"/>';
+  var R0=Math.max(4,Math.abs(st.drel)*1.15,4);
+  var half=(XB-XA)/2, mid=(XA+XB)/2, sc=half/R0;
+  var step=R0>8?4:(R0>4?2:1);
+  for(k=-Math.floor(R0/step)*step;k<=R0;k+=step){ var gx=mid+k*sc; if(gx<XA-2||gx>XB)continue; s+='<line x1="'+gx.toFixed(1)+'" y1="'+(YB-4)+'" x2="'+gx.toFixed(1)+'" y2="'+(YB+4)+'" stroke="#9CA3AF" stroke-width="1"/>'; s+='<text x="'+gx.toFixed(1)+'" y="'+(YB+18)+'" font-size="11" fill="#9CA3AF" text-anchor="middle">'+k+'</text>'; }
+  s+='<line x1="'+mid.toFixed(1)+'" y1="'+(YB-8)+'" x2="'+mid.toFixed(1)+'" y2="'+(YB+8)+'" stroke="#6B7280" stroke-width="1.5"/>';
+  s+='<text x="'+mid.toFixed(1)+'" y="'+(YB+34)+'" font-size="11" fill="#6B7280" text-anchor="middle">0 · 放上点</text>';
+  var g1=mid+Math.min(0,st.drel)*sc, g2=mid+Math.max(0,st.drel)*sc;
+  s+='<rect x="'+Math.max(XA,g1).toFixed(1)+'" y="'+(YB-6)+'" width="'+(Math.min(XB,g2)-Math.max(XA,g1)).toFixed(1)+'" height="12" fill="#CECBF6"/>';
+  var gc=Math.max(XA,Math.min(XB,mid+st.drel*sc));
+  s+='<line x1="'+gc.toFixed(1)+'" y1="'+(YB-12)+'" x2="'+gc.toFixed(1)+'" y2="'+(YB+12)+'" stroke="#534AB7" stroke-width="2.5"/>';
+  s+='<text x="'+gc.toFixed(1)+'" y="'+(YB+52)+'" font-size="12" fill="#534AB7" text-anchor="middle">划痕 '+st.scr.toFixed(2)+' m</text>';
+  if(st.scr*m.PXM>m.LOOP-2) s+='<text x="350" y="'+(YB+72)+'" font-size="12" fill="#A32D2D" text-anchor="middle">划痕已超过带周长，出现首尾重叠</text>';
+}
+
+/* ===================== 顶层调度 ===================== */
+function curModel(){ return cur==='H'?MH:MI; }
+function recalc(){ var m=curModel(); m.S=m.solve(); resetPlay(); }
+function resetPlay(){ t=0; fired=[]; document.getElementById('btnPlay').textContent='播放 ▶'; document.getElementById('hint').className='hint'; slider.value=0; render(); }
+function render(){ var m=curModel(); m.drawScene(t); drawVT(m); drawNums(m); }
+function chk(){
+  var es=curModel().evts();
+  for(var i=0;i<es.length;i++){
+    if(!fired[i] && t>=es[i].t-1e-9){
+      fired[i]=true; playing=false;
+      document.getElementById('btnPlay').textContent='继续播放 ▶';
+      var h=document.getElementById('hint');
+      h.innerHTML='定格 t = '+es[i].t.toFixed(2)+' s：'+es[i].msg;
+      h.className='hint show';
+    }
+  }
+}
+function syncControls(){
+  var m=curModel();
+  document.getElementById('pV0').value=m.v0mag;
+  document.getElementById('lV0').textContent=(m.v0dir*m.v0mag).toFixed(1)+' m/s';
+  document.getElementById('dV0').textContent=(m.v0mag===0)?'（轻放）':(m.v0dir>0?'（向右 · 从 A 端放上）':'（向左 · 从 B 端滑上）');
+  document.getElementById('btnFwd').className='dirbtn'+(m.v0dir>0?' on':'');
+  document.getElementById('btnRev').className='dirbtn'+(m.v0dir<0?' on':'');
+  document.getElementById('pVB').value=Math.abs(m.P.vb);
+  document.getElementById('lVB').textContent=Math.abs(m.P.vb).toFixed(1)+' m/s';
+  document.getElementById('pMU').value=m.P.mu;
+  document.getElementById('lMU').textContent=m.P.mu.toFixed(2);
+  document.getElementById('pL').value=m.P.L;
+  document.getElementById('lL').textContent=m.P.L.toFixed(1)+' m';
+  var thRow=document.getElementById('thetaRow'), dirRow=document.getElementById('dirRow');
+  if(cur==='I'){ thRow.classList.remove('hidden'); document.getElementById('pTH').value=m.P.theta; document.getElementById('lTH').textContent=m.P.theta+'°'; dirRow.classList.remove('hidden'); document.getElementById('btnBfwd').className='dirbtn'+(convDir>0?' on':''); document.getElementById('btnBrev').className='dirbtn'+(convDir<0?' on':''); }
+  else { thRow.classList.add('hidden'); dirRow.classList.add('hidden'); }
+}
+function updV0(){ var m=curModel(); m.P.v0=m.v0dir*m.v0mag; m.v0mag=m.v0mag; syncControls(); recalc(); }
+
+MH.init(); MI.init();
+
+/* 文案 */
+var SUB={ H:'水平传送带 · m=1 kg，g=10 m/s²　|　L、v₀、v带、μ 均可调　|　带上格线每 1 m 一格，随带移动　|　紫色划痕留在带上，绕过轮缘进入返回段',
+  I:'倾斜传送带 · m=1 kg，g=10 m/s²　|　L、θ、v₀、v带、μ、传送带转向均可调　|　命门在“共速之后”：μ≥tanθ 一起匀速；μ<tanθ 摩擦翻转、物块反向下滑　|　紫色划痕随带绕轮缘' };
+var NOTE={ H:'<b>怎么读这张图（水平）</b><br>① 物块相对传送带滑动时，摩擦力方向与<b>相对运动方向相反</b>，大小 f=μmg；<br>② 两者<b>速度相等（共速）</b>的瞬间，摩擦力立即归零，之后一起匀速——动画会在此自动定格；<br>③ 划痕长度 = 相对位移的最大绝对值，<b>不是相对路程</b>；共速后划痕不再增长，只随带一起移动，并<b>绕过轮缘进入返回段</b>；<br>④ v-t 图中实线与虚线的<b>交点即共速点</b>，两线之间面积 = 划痕长度；<br>⑤ 初速选<b>反向</b>时，物块从 B 端向左滑上：可能减速回头共速后从 B 端离开，也可能一路冲过全程从 A 端掉落。',
+  I:'<b>怎么读这张图（倾斜）</b><br>① 沿斜面方向，物块受重力分力 mg·sinθ（向下）与摩擦力；垂直斜面受支持力 N=mg·cosθ。<br>② <b>共速瞬间是判据转折点</b>：比较 μ 与 tanθ。μ≥tanθ 时静摩擦能托住，物块随带匀速上行；μ&lt;tanθ 时摩擦不足以平衡下滑分力，物块<b>减速→停→反向加速下滑</b>，摩擦力方向翻转（由沿带向上变为…仍向上，但已不足以抵消下滑）。<br>③ 划痕仍是相对位移最大绝对值；本默认题（θ=37°、v₀=12、v带=4、μ=0.25）共速于 t=1 s，划痕 4 m，物块随后滑回底端 A。<br>④ 倾斜带摩擦<b>永不为零</b>（除非 μ≥tanθ 且共速后静摩擦平衡）——与水平带“共速即 f=0”形成对比，这正是学生最易错处。' };
+
+/* 标签页切换 */
+var tabs=document.querySelectorAll('.tab');
+tabs.forEach(function(tb){
+  if(tb.classList.contains('off')) return;
+  tb.onclick=function(){
+    tabs.forEach(function(x){ if(!x.classList.contains('off')) x.classList.remove('on'); });
+    tb.classList.add('on');
+    cur=tb.getAttribute('data-m');
+    document.getElementById('sceneH').classList.toggle('hidden', cur!=='H');
+    document.getElementById('sceneI').classList.toggle('hidden', cur!=='I');
+    document.getElementById('sub').textContent=SUB[cur];
+    document.getElementById('note').innerHTML=NOTE[cur];
+    syncControls(); recalc();
+  };
+});
+
+/* 控件 */
+document.getElementById('btnPlay').onclick=function(){
+  var m=curModel();
+  if(t>=m.S.tEnd-1e-9){ t=0; fired=[]; }
+  playing=!playing; this.textContent=playing?'暂停 ‖':'继续播放 ▶';
+  document.getElementById('hint').className='hint'; last=performance.now();
+};
+document.getElementById('btnReset').onclick=function(){ playing=false; resetPlay(); };
+slider.oninput=function(){ playing=false; document.getElementById('btnPlay').textContent='继续播放 ▶'; t=curModel().S.tEnd*(this.value/1000); render(); };
+document.getElementById('spd').onchange=function(){ speed=parseFloat(this.value); };
+document.getElementById('btnFwd').onclick=function(){ curModel().v0dir=1; updV0(); };
+document.getElementById('btnRev').onclick=function(){ curModel().v0dir=-1; updV0(); };
+document.getElementById('pV0').oninput=function(){ curModel().v0mag=parseFloat(this.value); updV0(); };
+document.getElementById('pVB').oninput=function(){ var mag=parseFloat(this.value); var m=curModel(); m.P.vb=(cur==='I'?convDir:1)*mag; document.getElementById('lVB').textContent=Math.abs(m.P.vb).toFixed(1)+' m/s'; recalc(); };
+document.getElementById('btnBfwd').onclick=function(){ convDir=1; MI.P.vb=Math.abs(MI.P.vb); document.getElementById('btnBfwd').className='dirbtn on'; document.getElementById('btnBrev').className='dirbtn'; document.getElementById('lVB').textContent=MI.P.vb.toFixed(1)+' m/s'; recalc(); };
+document.getElementById('btnBrev').onclick=function(){ convDir=-1; MI.P.vb=-Math.abs(MI.P.vb); document.getElementById('btnBfwd').className='dirbtn'; document.getElementById('btnBrev').className='dirbtn on'; document.getElementById('lVB').textContent=Math.abs(MI.P.vb).toFixed(1)+' m/s'; recalc(); };
+document.getElementById('pMU').oninput=function(){ curModel().P.mu=parseFloat(this.value); document.getElementById('lMU').textContent=curModel().P.mu.toFixed(2); recalc(); };
+document.getElementById('pTH').oninput=function(){ MI.P.theta=parseFloat(this.value); document.getElementById('lTH').textContent=MI.P.theta+'°'; recalc(); };
+document.getElementById('pL').oninput=function(){ var m=curModel(); m.P.L=parseFloat(this.value); document.getElementById('lL').textContent=m.P.L.toFixed(1)+' m'; m.init(); recalc(); };
+
+function loop(now){
+  if(!last) last=now;
+  var dt=(now-last)/1000; last=now; if(dt>0.1) dt=0.1;
+  var m=curModel();
+  if(playing){
+    t+=dt*speed;
+    if(t>=m.S.tEnd) t=m.S.tEnd;
+    slider.value=Math.round(1000*t/m.S.tEnd);
+    chk();
+  }
+  m.drawScene(t); drawVT(m); drawNums(m);
+  requestAnimationFrame(loop);
+}
+
+document.getElementById('sub').textContent=SUB.H;
+document.getElementById('note').innerHTML=NOTE.H;
+syncControls(); recalc();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

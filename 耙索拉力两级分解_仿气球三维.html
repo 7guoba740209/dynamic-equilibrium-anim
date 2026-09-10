@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>耙索拉力两级正交分解（仿气球三维法）</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;font-family:"Microsoft YaHei","PingFang SC",sans-serif;background:#eef2f7;color:#1c2530;}
+  #wrap{display:flex;height:100vh;}
+  #cvWrap{flex:1;position:relative;background:#eef2f7;}
+  canvas{display:block;width:100%;height:100%;cursor:grab;}
+  canvas:active{cursor:grabbing;}
+  #tip{position:absolute;left:12px;bottom:10px;font-size:11.5px;color:#7b8798;}
+  #side{width:320px;background:#fff;border-left:1px solid #d7e0ec;padding:14px 16px;overflow:auto;box-shadow:-2px 0 10px rgba(20,40,70,.06);}
+  h1{font-size:15px;margin:0 0 3px;color:#15233a;}
+  .sub{font-size:12px;color:#6b7a90;margin-bottom:10px;line-height:1.6;}
+  .row{margin:9px 0;}
+  .row label{display:block;margin-bottom:3px;color:#33445c;font-weight:600;font-size:12.5px;}
+  input[type=range]{width:100%;}
+  .val{color:#0a6cff;font-weight:700;}
+  .btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;}
+  .btn{flex:1 1 46%;border:1px solid #b9c6d8;background:#f6f9fd;border-radius:7px;padding:6px 4px;cursor:pointer;font-size:12px;color:#243449;}
+  .btn:hover{border-color:#0a6cff;color:#0a6cff;}
+  .btn.on{background:#0a6cff;color:#fff;border-color:#0a6cff;}
+  .chk{display:flex;align-items:center;gap:6px;margin:5px 0;color:#33445c;font-size:12.5px;}
+  .chk input{width:15px;height:15px;}
+  hr{border:0;border-top:1px solid #e1e8f1;margin:10px 0;}
+  .lg{display:flex;align-items:center;gap:7px;margin:4px 0;font-size:12px;}
+  .sw{width:26px;height:5px;border-radius:3px;flex:none;}
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  td{padding:2px 3px;}
+  td.k{color:#55627a;} td.v{text-align:right;font-weight:700;color:#0a3d7a;}
+  .note{font-size:11.5px;color:#6b7a90;line-height:1.6;margin-top:8px;}
+  .eq{font-size:11.5px;color:#33445c;line-height:1.7;background:#f5f8fc;border:1px solid #e1e8f1;border-radius:6px;padding:6px 8px;margin-top:8px;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="cvWrap">
+    <canvas id="cv"></canvas>
+    <div id="tip">拖动旋转 · 滚轮缩放 · 只显示一根耙索拉力 F 的两级正交分解</div>
+  </div>
+  <div id="side">
+    <h1>耙索拉力 F 的两级正交分解</h1>
+    <div class="sub">
+      ① <b>F</b> = <b>F∥</b> + <b>F⊥</b><br>
+      　F∥：在<b>倾斜绳索平面</b>内、指向 O₁（斜向上前）的力；F⊥：垂直该平面、指向另一耙索的<b>水平</b>力<br>
+      ② <b>F∥</b> = <b>Fx</b> + <b>Fz</b><br>
+      　Fx：指向<b>运动方向</b>的水平力；Fz：<b>竖直向上</b>的力
+    </div>
+
+    <div class="row">
+      <label>绳索平面倾角 φ = <span class="val" id="phiVal">30</span>°</label>
+      <input type="range" id="phiS" min="15" max="52" step="1" value="30">
+    </div>
+    <div class="row">
+      <label>箭头长度缩放 = <span class="val" id="fsVal">1.20</span>×</label>
+      <input type="range" id="fsS" min="0.4" max="3.0" step="0.05" value="1.2">
+    </div>
+
+    <div class="btns">
+      <button class="btn on" id="bRot">⟳ 自动旋转</button>
+      <button class="btn" id="bScan">▶ 扫描 φ</button>
+      <button class="btn" id="bReset">↺ 复位</button>
+      <button class="btn" id="bPause">⏸ 暂停动画</button>
+    </div>
+
+    <div class="btns" style="margin-top:8px">
+      <button class="btn on" id="vIso">立体</button>
+      <button class="btn" id="vSide">侧视·看φ</button>
+      <button class="btn" id="vTop">俯视·看AB</button>
+      <button class="btn" id="vPlane">正视·看平面</button>
+    </div>
+
+    <hr>
+    <label class="chk"><input type="checkbox" id="cPlane" checked> 半透明倾斜平面（绳索 AO₁B 所在面）</label>
+    <label class="chk"><input type="checkbox" id="cL1" checked> ① 级：F = F∥ + F⊥</label>
+    <label class="chk"><input type="checkbox" id="cL2" checked> ② 级：F∥ = Fx + Fz</label>
+    <label class="chk"><input type="checkbox" id="cGrid" checked> 显示地面网格</label>
+
+    <hr>
+    <div class="lg"><span class="sw" style="background:#5b2c8a"></span> F　耙索拉力（合力①）</div>
+    <div class="lg"><span class="sw" style="background:#1e9e5a"></span> F⊥ 垂直平面·指向另一耙索</div>
+    <div class="lg"><span class="sw" style="background:#9b59b6"></span> F∥ 平面内分量（合力②）</div>
+    <div class="lg"><span class="sw" style="background:#d9531c"></span> Fx 指向运动方向的水平分量</div>
+    <div class="lg"><span class="sw" style="background:#0e7c6b"></span> Fz 竖直向上分量</div>
+
+    <div class="eq">
+      <b>与原题对应</b>（⊿AO₁B 等边，∠AO₁B=60°，绳长 L，平面倾角 30°）：<br>
+      F∥ = F·√3/2　　F⊥ = F/2<br>
+      Fx = 3F/4　　Fz = F√3/4<br>
+      两绳总前向 = 2Fx = <b>3F/2</b>（=摩擦力，答 C）<br>
+      两绳总合力 = F√3（答 B）
+    </div>
+
+    <hr>
+    <table>
+      <tr><td class="k">平面倾角 φ</td><td class="v" id="dPhi">–</td></tr>
+      <tr><td class="k">F 耙索拉力</td><td class="v" id="dF">–</td></tr>
+      <tr><td class="k">F∥（平面内）</td><td class="v" id="dFq">–</td></tr>
+      <tr><td class="k">F⊥（垂直面）</td><td class="v" id="dFp">–</td></tr>
+      <tr><td class="k">Fx（向前）</td><td class="v" id="dFx">–</td></tr>
+      <tr><td class="k">Fz（向上）</td><td class="v" id="dFz">–</td></tr>
+      <tr><td class="k">两绳总前向 2Fx</td><td class="v" id="d2Fx">–</td></tr>
+    </table>
+    <div class="note">φ 增大（绳索平面更陡）→ Fx 减小、Fz 增大，F∥ 更多转为竖直抬升——这正是"耙头入土深浅"的几何来源。结构完全类比气球题（T = T⊥+T∥，T∥=Tx+Tz）。</div>
+  </div>
+</div>
+
+<script>
+/* ==================== 向量数学 ==================== */
+function V(x,y,z){return {x:x,y:y,z:z};}
+function add(a,b){return V(a.x+b.x,a.y+b.y,a.z+b.z);}
+function sub(a,b){return V(a.x-b.x,a.y-b.y,a.z-b.z);}
+function mul(a,s){return V(a.x*s,a.y*s,a.z*s);}
+function dot(a,b){return a.x*b.x+a.y*b.y+a.z*b.z;}
+function cross(a,b){return V(a.y*b.z-a.z*b.y, a.z*b.x-a.x*b.z, a.x*b.y-a.y*b.x);}
+function len(a){return Math.sqrt(dot(a,a));}
+function norm(a){var l=len(a)||1; return mul(a,1/l);}
+
+/* ==================== 物理模型 ==================== */
+/* 坐标: X=前进方向(运动方向), Y=竖直向上, Z=横向(侧向) */
+const P = { L:2.4, r:0.35, F0:1.0 };
+function geom(phiDeg){
+  const phi = phiDeg*Math.PI/180;
+  const cp=Math.cos(phi), sp=Math.sin(phi);
+  const alt = P.L*Math.sqrt(3)/2;            // O₁ 到 AB 的距离（ equilateral 高 ）
+  const GY = -1.5;
+  const A = V(0, GY,  P.L/2);                // 被分析耙索系结点 A
+  const B = V(0, GY, -P.L/2);                // 另一耙索系结点 B
+  const O2= V(0, GY, 0);                      // AB 中点
+  const O1= V(alt*cp, GY+alt*sp, 0);         // 两绳会合（牵引钩）处
+  return {phi:phi, cp:cp, sp:sp, alt:alt, GY:GY, A:A, B:B, O2:O2, O1:O1};
+}
+/* 对一根耙索（A→O₁）做两级分解，返回各力向量（已含 F0 标度） */
+function decomp(g){
+  const F = P.F0;
+  const Fhat = norm(sub(g.O1, g.A));          // 沿绳 A→O₁
+  const uSym = V(g.cp, g.sp, 0);              // 平面内方向（O₂→O₁ 在 X-Y 投影）
+  const Fvec = mul(Fhat, F);                  // 耙索拉力 F
+  const Fpar = mul(uSym, F*Math.sqrt(3)/2);   // F∥ 平面内角向 O₁（大小 F√3/2）
+  const Fper = sub(Fvec, Fpar);               // F⊥ 垂直平面（指向另一耙索 -Z，大小 F/2）
+  const Fx   = V(F*Math.sqrt(3)/2*g.cp, 0, 0);  // 向前（+X）
+  const Fz   = V(0, F*Math.sqrt(3)/2*g.sp, 0);  // 竖直向上（+Y）
+  return {F:F, Fvec:Fvec, Fpar:Fpar, Fper:Fper, Fx:Fx, Fz:Fz,
+          mF:F, mFpar:F*Math.sqrt(3)/2, mFper:F/2,
+          mFx:F*Math.sqrt(3)/2*g.cp, mFz:F*Math.sqrt(3)/2*g.sp};
+}
+
+/* ==================== 相机与投影 ==================== */
+const cam = { az:0.85, el:0.34, dist:9.5, target:V(0.9,-0.5,0) };
+let camPos, camF, camR, camU, focal=700;
+function updCam(){
+  const ce=Math.cos(cam.el), se=Math.sin(cam.el);
+  const ca=Math.cos(cam.az), sa=Math.sin(cam.az);
+  camPos = add(cam.target, V(cam.dist*ce*sa, cam.dist*se, cam.dist*ce*ca));
+  camF = norm(sub(cam.target, camPos));
+  camR = norm(cross(camF, V(0,1,0)));
+  camU = cross(camR, camF);
+}
+function proj(Pt){
+  const d = sub(Pt, camPos);
+  const z = dot(d, camF);
+  if(z < 0.2) return null;
+  return { x: W/2 + (dot(d,camR)/z)*focal, y: H/2 - (dot(d,camU)/z)*focal, z:z };
+}
+
+/* ==================== 画布 ==================== */
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let W=0, H=0;
+function resize(){
+  const box = document.getElementById('cvWrap');
+  W = box.clientWidth || window.innerWidth;
+  H = box.clientHeight || window.innerHeight;
+  if(W<2) W = window.innerWidth;
+  if(H<2) H = window.innerHeight;
+  const dpr = Math.min(window.devicePixelRatio||1, 2);
+  cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  focal = Math.min(W,H)*1.15;
+}
+window.addEventListener('resize', resize);
+
+/* ==================== 颜色 ==================== */
+function hex2rgb(h){ h=h.replace('#',''); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]; }
+function shade(h,k){
+  const c=hex2rgb(h);
+  const f=v=>Math.max(0,Math.min(255,Math.round(k>0 ? v+(255-v)*k : v*(1+k))));
+  return 'rgb('+f(c[0])+','+f(c[1])+','+f(c[2])+')';
+}
+const C = {
+  F:'#5b2c8a',      // 深紫 耙索拉力（合力①）
+  Fq:'#9b59b6',     // 中紫 平面内分量（合力②）
+  Fp:'#1e9e5a',     // 绿 垂直平面的水平分量
+  Fx:'#d9531c',     // 橙 向前水平分量
+  Fz:'#0e7c6b',     // 青 竖直向上分量
+  rope:'#46546a', harrow:'#8b6f47', harrowEdge:'#5e4a2e', marker:'#f39c12', hitch:'#33414f',
+  grid:'#d5dde8', line:'#5b6776'
+};
+
+/* ==================== 绘图基元 ==================== */
+function line3(A,B,color,w,dash){
+  const a=proj(A), b=proj(B);
+  if(!a||!b) return;
+  ctx.save();
+  ctx.strokeStyle=color; ctx.lineWidth=w; ctx.lineCap='round';
+  if(dash) ctx.setLineDash(dash);
+  ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+  ctx.restore();
+}
+function arrow3(A,B,color,w,hs){
+  const a=proj(A), b=proj(B);
+  if(!a||!b) return;
+  ctx.save();
+  ctx.strokeStyle=color; ctx.lineWidth=w; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+  ctx.restore();
+  const dx=b.x-a.x, dy=b.y-a.y, L=Math.hypot(dx,dy);
+  if(L<2) return;
+  const ux=dx/L, uy=dy/L, px=-uy, py=ux;
+  const s=Math.min(hs||14, L*0.45);
+  ctx.fillStyle=color;
+  ctx.beginPath();
+  ctx.moveTo(b.x,b.y);
+  ctx.lineTo(b.x-ux*s+px*s*0.40, b.y-uy*s+py*s*0.40);
+  ctx.lineTo(b.x-ux*s-px*s*0.40, b.y-uy*s-py*s*0.40);
+  ctx.closePath(); ctx.fill();
+}
+function sphere3(c,R,color,alpha){
+  const p=proj(c); if(!p) return;
+  const rs=(R/p.z)*focal;
+  if(rs<0.6) return;
+  const r0=Math.max(rs,1);
+  const g=ctx.createRadialGradient(p.x-r0*0.36, p.y-r0*0.36, r0*0.03, p.x, p.y, r0);
+  g.addColorStop(0, shade(color,0.60));
+  g.addColorStop(0.62, color);
+  g.addColorStop(1, shade(color,-0.32));
+  ctx.save();
+  ctx.globalAlpha=(alpha===undefined?1:alpha);
+  ctx.beginPath(); ctx.arc(p.x,p.y,r0,0,Math.PI*2);
+  ctx.fillStyle=g; ctx.fill();
+  ctx.globalAlpha=1;
+  ctx.strokeStyle=shade(color,-0.35); ctx.lineWidth=1.1; ctx.stroke();
+  ctx.restore();
+}
+function quad3(corners, fill, stroke, alpha){
+  const pts = corners.map(proj);
+  if(pts.indexOf(null)>=0) return;
+  ctx.save();
+  ctx.globalAlpha=alpha;
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
+  ctx.closePath();
+  ctx.fillStyle=fill; ctx.fill();
+  ctx.globalAlpha=1;
+  if(stroke){ ctx.save(); ctx.strokeStyle=stroke; ctx.lineWidth=1.2; ctx.stroke(); ctx.restore(); }
+  ctx.restore();
+}
+function label3(Pt, text, color, dx, dy){
+  const p=proj(Pt); if(!p) return;
+  ctx.save();
+  ctx.font='bold 13px "Microsoft YaHei", sans-serif';
+  ctx.textAlign='left'; ctx.textBaseline='middle';
+  ctx.lineWidth=3.6; ctx.strokeStyle='rgba(238,242,247,0.96)';
+  ctx.strokeText(text, p.x+(dx||8), p.y+(dy||0));
+  ctx.fillStyle=color;
+  ctx.fillText(text, p.x+(dx||8), p.y+(dy||0));
+  ctx.restore();
+}
+
+/* ==================== 场景 ==================== */
+function drawGround(t){
+  const sp=1.0, ext=9;
+  const off = -((t*0.7) % sp);
+  for(let z=-ext; z<=ext; z+=sp) line3(V(-ext,P.GY,z), V(ext,P.GY,z), C.grid, 1);
+  for(let x=-ext; x<=ext; x+=sp){
+    const xx = x + off;
+    line3(V(xx,P.GY,-ext), V(xx,P.GY,ext), C.grid, 1);
+  }
+}
+function drawRopes(g){
+  line3(g.A, g.O1, C.rope, 2.2);
+  line3(g.B, g.O1, C.rope, 2.2);
+  line3(g.A, g.B, '#b9c6d8', 1.4, [4,4]);
+}
+function drawHarrow(g){
+  // 耙：在地面上，A、B 在前沿（x=0），向后延伸到 x=-2.6，带铁齿
+  const w = P.L/2 + 0.3;        // 半宽（沿 Z）
+  const xF = 0, xB = -2.6;      // 前沿(过 A、B) 与后沿
+  const y = g.GY;
+  const p1=V(xF,y,-w), p2=V(xF,y,w), p3=V(xB,y,w), p4=V(xB,y,-w);
+  const pts=[p1,p2,p3,p4].map(proj);
+  if(pts.every(p=>p)){
+    ctx.save(); ctx.globalAlpha=0.34;
+    ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
+    for(let i=1;i<4;i++) ctx.lineTo(pts[i].x,pts[i].y);
+    ctx.closePath(); ctx.fillStyle=C.harrow; ctx.fill();
+    ctx.globalAlpha=1;
+    ctx.strokeStyle=C.harrowEdge; ctx.lineWidth=1.6; ctx.stroke();
+    ctx.restore();
+  }
+  // 耙齿（向下扎入地面）
+  const n=6;
+  for(let i=0;i<n;i++){
+    const x = xB+0.3 + i*((xF-xB-0.6)/(n-1));
+    line3(V(x,y,-w+0.1), V(x,y-0.28,-w+0.28), C.harrowEdge, 1.3);
+    line3(V(x,y, w-0.1), V(x,y-0.28, w-0.28), C.harrowEdge, 1.3);
+  }
+}
+function drawPull(g){
+  // 牵引方向（运动方向 +X）指示箭头
+  arrow3(g.O1, add(g.O1, V(1.6,0,0)), '#c0392b', 3.0, 13);
+  label3(add(g.O1,V(1.75,0,0)), '牵引方向', '#c0392b', 6, -2);
+}
+function drawMarkers(g){
+  // A、B 系结点 + O₁会合点 + O₂中点
+  sphere3(g.A, 0.12, C.marker, 0.95);
+  sphere3(g.B, 0.12, C.marker, 0.95);
+  sphere3(g.O2, 0.13, '#3498db', 0.95);
+  sphere3(g.O1, 0.14, '#e74c3c', 0.95);
+  label3(g.A, 'A', '#7a4a10', -16, 4);
+  label3(g.B, 'B', '#7a4a10', 10, 4);
+  label3(g.O2, 'O₂', '#1f5582', -4, -16);
+  label3(g.O1, 'O₁', '#a8281c', 10, -4);
+}
+
+/* --- 两级正交分解（在 A 点画出） --- */
+function drawDecomp(s, g, A){
+  const fs = forceScale;
+  const O  = A;
+  const cF  = mul(s.Fvec, fs);
+  const cFp = mul(s.Fper, fs);   // F⊥ 垂直平面（指向另一耙索 -Z）
+  const cFq = mul(s.Fpar, fs);   // F∥ 平面内（指向 O₁，斜向上前）
+  const cFx = mul(s.Fx, fs);     // Fx 向前 +X
+  const cFz = mul(s.Fz, fs);     // Fz 向上 +Y
+
+  const pF  = add(O, cF);
+  const pFp = add(O, cFp);
+  const pFq = add(O, cFq);
+  const pFx = add(O, cFx);
+  const pFz = add(O, cFz);
+
+  // ① 级平行四边形虚线：F = F∥ + F⊥
+  if(showL1){ line3(pFp, pF, C.line, 1.3, [5,4]); line3(pFq, pF, C.line, 1.3, [5,4]); }
+  // ② 级平行四边形虚线：F∥ = Fx + Fz
+  if(showL2){ line3(pFx, pFq, C.line, 1.3, [5,4]); line3(pFz, pFq, C.line, 1.3, [5,4]); }
+  // ② 级分量箭头
+  if(showL2){ arrow3(O, pFx, C.Fx, 3.4, 13); arrow3(O, pFz, C.Fz, 3.4, 13); }
+  // ① 级分量箭头
+  if(showL1){ arrow3(O, pFp, C.Fp, 3.4, 13); arrow3(O, pFq, C.Fq, 3.8, 14); }
+  // 合力箭头
+  arrow3(O, pF, C.F, 4.2, 15);
+
+  // 标签
+  label3(pF,  'F',  C.F,  9, -7);
+  if(showL1){ label3(pFp, 'F⊥', C.Fp, 10, 10); label3(pFq, 'F∥', C.Fq, -30, -6); }
+  if(showL2){ label3(pFx, 'Fx', C.Fx, 9, 14); label3(pFz, 'Fz', C.Fz, 10, 0); }
+}
+
+function drawScene(t){
+  ctx.clearRect(0,0,W,H);
+  const bg=ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#f4f7fb'); bg.addColorStop(1,'#e4eaf3');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+
+  updCam();
+  const g = geom(curPhi);
+  const s = decomp(g);
+
+  if(showGrid) drawGround(t);
+  drawRopes(g);
+  drawHarrow(g);
+  drawPull(g);
+  drawMarkers(g);
+
+  // 半透明倾斜平面（绳索 AO₁B 所在面）：过 A，沿 uSym 与 Z 方向
+  if(showPlane){
+    const hs=1.6, u=V(g.cp,g.sp,0);
+    const zc=V(0,0,1);
+    const c1=add(g.A, add(mul(u,hs), mul(zc,hs)));
+    const c2=add(g.A, add(mul(u,hs), mul(zc,-hs)));
+    const c3=add(g.A, add(mul(u,-hs), mul(zc,-hs)));
+    const c4=add(g.A, add(mul(u,-hs), mul(zc,hs)));
+    quad3([c1,c2,c3,c4], '#2f6fb0', 'rgba(47,111,176,0.55)', 0.11);
+  }
+
+  drawDecomp(s, g, g.A);
+
+  document.getElementById('dPhi').textContent=curPhi.toFixed(0)+'°';
+  document.getElementById('dF').textContent=s.mF.toFixed(3);
+  document.getElementById('dFq').textContent=s.mFpar.toFixed(3);
+  document.getElementById('dFp').textContent=s.mFper.toFixed(3);
+  document.getElementById('dFx').textContent=s.mFx.toFixed(3);
+  document.getElementById('dFz').textContent=s.mFz.toFixed(3);
+  document.getElementById('d2Fx').textContent=(2*s.mFx).toFixed(3);
+}
+
+/* ==================== 状态与交互 ==================== */
+let curPhi=30, forceScale=1.2;
+let showL1=true, showL2=true, showPlane=true, showGrid=true;
+let autoRot=true, scanning=false, scanDir=1, animating=true;
+let dragging=false, lastX=0, lastY=0;
+
+document.getElementById('phiS').addEventListener('input', function(e){
+  curPhi=parseFloat(e.target.value);
+  document.getElementById('phiVal').textContent=curPhi.toFixed(0);
+});
+document.getElementById('fsS').addEventListener('input', function(e){
+  forceScale=parseFloat(e.target.value);
+  document.getElementById('fsVal').textContent=forceScale.toFixed(2);
+});
+document.getElementById('cL1').addEventListener('change', e=>showL1=e.target.checked);
+document.getElementById('cL2').addEventListener('change', e=>showL2=e.target.checked);
+document.getElementById('cPlane').addEventListener('change', e=>showPlane=e.target.checked);
+document.getElementById('cGrid').addEventListener('change', e=>showGrid=e.target.checked);
+
+const bRot=document.getElementById('bRot');
+bRot.addEventListener('click', ()=>{ autoRot=!autoRot; bRot.classList.toggle('on',autoRot); });
+const bScan=document.getElementById('bScan');
+bScan.addEventListener('click', ()=>{
+  scanning=!scanning;
+  bScan.textContent = scanning ? '⏸ 停扫描' : '▶ 扫描 φ';
+  bScan.classList.toggle('on', scanning);
+});
+const bPause=document.getElementById('bPause');
+bPause.addEventListener('click', ()=>{
+  animating=!animating;
+  bPause.textContent = animating ? '⏸ 暂停动画' : '▶ 继续动画';
+  bPause.classList.toggle('on', !animating);
+});
+
+function setView(k){
+  ['vIso','vSide','vTop','vPlane'].forEach(id=>document.getElementById(id).classList.remove('on'));
+  if(k==='iso'){ cam.az=0.85; cam.el=0.34; document.getElementById('vIso').classList.add('on'); }
+  if(k==='side'){ cam.az=0.0; cam.el=0.10; document.getElementById('vSide').classList.add('on'); }
+  if(k==='top'){ cam.az=0.0; cam.el=1.45; document.getElementById('vTop').classList.add('on'); }
+  if(k==='plane'){ cam.az=-Math.PI/2; cam.el=Math.PI/2 - curPhi*Math.PI/180; document.getElementById('vPlane').classList.add('on'); }
+}
+document.getElementById('vIso').addEventListener('click', ()=>setView('iso'));
+document.getElementById('vSide').addEventListener('click', ()=>setView('side'));
+document.getElementById('vTop').addEventListener('click', ()=>setView('top'));
+document.getElementById('vPlane').addEventListener('click', ()=>setView('plane'));
+document.getElementById('bReset').addEventListener('click', ()=>{
+  cam.dist=9.5; cam.target=V(0.9,-0.5,0);
+  curPhi=30; forceScale=1.2;
+  document.getElementById('phiS').value=30; document.getElementById('phiVal').textContent='30';
+  document.getElementById('fsS').value=1.2; document.getElementById('fsVal').textContent='1.20';
+  scanning=false; bScan.textContent='▶ 扫描 φ'; bScan.classList.remove('on');
+  setView('iso');
+});
+
+cv.addEventListener('mousedown', e=>{ dragging=true; lastX=e.clientX; lastY=e.clientY; });
+window.addEventListener('mouseup', ()=>{ dragging=false; });
+window.addEventListener('mousemove', e=>{
+  if(!dragging) return;
+  cam.az -= (e.clientX-lastX)*0.007;
+  cam.el += (e.clientY-lastY)*0.007;
+  cam.el = Math.max(-0.35, Math.min(1.45, cam.el));
+  lastX=e.clientX; lastY=e.clientY;
+});
+cv.addEventListener('wheel', e=>{
+  e.preventDefault();
+  cam.dist = Math.max(4.0, Math.min(26, cam.dist + e.deltaY*0.012));
+}, {passive:false});
+
+/* ==================== 主循环 ==================== */
+let lastT = performance.now(), tt = 0;
+function loop(now){
+  const dt = Math.min((now-lastT)/1000, 0.06); lastT=now;
+  if(animating){
+    tt += dt;
+    if(autoRot && !dragging) cam.az += dt*0.28;
+    if(scanning){
+      curPhi += scanDir*dt*10;
+      if(curPhi>52){curPhi=52; scanDir=-1;} if(curPhi<15){curPhi=15; scanDir=1;}
+      document.getElementById('phiS').value=curPhi;
+      document.getElementById('phiVal').textContent=curPhi.toFixed(0);
+    }
+  }
+  drawScene(tt);
+  requestAnimationFrame(loop);
+}
+resize();
+setView('iso');
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

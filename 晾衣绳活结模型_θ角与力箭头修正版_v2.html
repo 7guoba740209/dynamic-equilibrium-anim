@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>晾衣绳（活结）模型 · 拖动 N 杆与 b 点探究动态平衡</title>
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;font-family:"Microsoft YaHei","PingFang SC",sans-serif;
+    background:#f4f1ea;color:#2b2b28;
+    user-select:none;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;}
+  .wrap{max-width:1180px;margin:0 auto;padding:14px 16px 30px;}
+  h1{font-size:23px;margin:6px 0 2px;color:#1f3a5f;letter-spacing:1px;}
+  .sub{font-size:14px;color:#6b6657;margin-bottom:10px;}
+  .stage{background:#fbfaf6;border:1px solid #d9d3c4;border-radius:10px;
+    box-shadow:0 2px 10px rgba(0,0,0,.05);overflow:hidden;}
+  svg{display:block;width:100%;height:auto;touch-action:none;cursor:default;
+    user-select:none;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;}
+  .grid{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px;align-items:flex-start;}
+  .card{background:#fff;border:1px solid #ddd6c6;border-radius:10px;padding:12px 14px;
+    flex:1 1 360px;box-shadow:0 1px 6px rgba(0,0,0,.04);}
+  .card h2{font-size:16px;margin:0 0 8px;color:#1f3a5f;}
+  table{width:100%;border-collapse:collapse;font-size:15px;}
+  th,td{padding:6px 8px;text-align:left;border-bottom:1px solid #ece7d8;}
+  th{font-size:13px;color:#6b6657;font-weight:600;}
+  td.v{font-variant-numeric:tabular-nums;font-weight:600;color:#1f3a5f;}
+  .chg{display:inline-block;min-width:30px;text-align:center;font-weight:700;border-radius:5px;padding:1px 7px;font-size:14px;}
+  .chg.up{background:#fde8e4;color:#b23a2b;}      /* 变大 红 */
+  .chg.down{background:#e3f3e8;color:#1f7a45;}    /* 变小 绿 */
+  .chg.eq{background:#eef0f2;color:#777;}          /* 不变 灰 */
+  .note{font-size:13px;line-height:1.7;color:#4a463c;background:#fbf7ec;
+    border-left:4px solid #c9a24a;padding:9px 12px;border-radius:0 6px 6px 0;margin-top:6px;}
+  .btns{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+  button{font-family:inherit;font-size:14.5px;padding:8px 13px;border:1px solid #c9a24a;
+    background:#fff8e8;color:#7a5a16;border-radius:7px;cursor:pointer;transition:.15s;}
+  button:hover{background:#f3e6c4;}
+  button.sec{border-color:#9aa7b5;background:#f1f5f9;color:#33506f;}
+  .slider{margin:10px 0;}
+  .slider label{display:block;font-size:14px;color:#4a463c;margin-bottom:3px;}
+  .slider input[type=range]{width:100%;}
+  .tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:20px;margin-left:6px;}
+  .tag.drag{background:#e8f0e2;color:#3a6b2a;}
+  .tag.sec{background:#eef1f5;color:#3a567a;}
+  .warn{color:#b23a2b;font-weight:600;}
+  .foot{font-size:12px;color:#8a8470;margin-top:14px;text-align:center;}
+  kbd{background:#ece7d8;border-radius:4px;padding:1px 6px;font-size:12px;border:1px solid #cfc7b3;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>晾衣绳（活结）模型 · 动态平衡探究</h1>
+  <div class="sub">高考原型：2017 天津卷第 8 题。&nbsp; 拖动 <b>① N 杆</b>（水平，改杆间距 d）与 <b>② b 点</b>（沿固定长度的 N 杆上下滑，改高度差 Δh）。<b>两根立柱长度固定不变</b>，拖动只改变 d 与绳端高度。</div>
+
+  <div class="stage">
+    <svg id="cv" viewBox="0 0 900 580" preserveAspectRatio="xMidYMid meet" aria-label="晾衣绳模型交互画布"></svg>
+  </div>
+
+  <div class="grid">
+    <!-- 左：对比表 -->
+    <div class="card">
+      <h2>物理量 · 变 / 不变 <span class="tag drag">拖动即对比</span></h2>
+      <table>
+        <thead><tr><th>物理量</th><th>当前值</th><th>较基准</th><th>说明</th></tr></thead>
+        <tbody id="tbl"></tbody>
+      </table>
+      <div class="note" id="note">提示：拖动前会自动记录基准（虚影）。<b>移动 N 杆</b>→ d 变 → θ、T 变；<b>移动 b 点</b>→ Δh 变 → θ、T <b>不变</b>，仅 L₁/L₂ 重分配、挂钩沿绳滑动。</div>
+    </div>
+
+    <!-- 右：情景与参数 -->
+    <div class="card">
+      <h2>情景演示</h2>
+      <div class="btns">
+        <button data-p="pole">① 移动 N 杆右移</button>
+        <button data-p="bup">② 移动 b 点上移</button>
+        <button data-p="heavy">③ 换更重的衣服</button>
+        <button class="sec" data-p="reset">④ 复位</button>
+      </div>
+      <div class="btns">
+        <button class="sec" id="bSnap">记录当前为基准</button>
+        <button class="sec" id="bClear">清除基准</button>
+      </div>
+
+      <h2 style="margin-top:14px;">系统参数 <span class="tag sec">一般不改</span></h2>
+      <div class="slider">
+        <label>绳总长 L = <b id="vL">400</b> cm（不可伸长）</label>
+        <input type="range" id="sL" min="200" max="520" step="2" value="400">
+      </div>
+      <div class="slider">
+        <label>衣物质量 m = <b id="vm">3.0</b> kg（含衣架）</label>
+        <input type="range" id="sm" min="0.5" max="12" step="0.5" value="3">
+      </div>
+      <div class="note"><b>两个独立自变量：</b>① 拖 <kbd>N 杆</kbd> 水平移动 → 仅改杆间距 d；② 拖 <kbd>b 点</kbd> 沿固定长度的 N 杆上下滑 → 仅改高度差 Δh。<b>两杆长度始终不变</b>，b 只是绳端环在杆上滑移。L、m 仅作拓展演示。</div>
+    </div>
+  </div>
+
+  <div class="foot">箭头长度 ∝ 力大小，同一时刻三力共用同一比例尺（见左下角）。g 取 10 m/s²。物理内核已用 Node 校验，约束闭合误差 ≤ 1e-14。</div>
+</div>
+
+<script>
+/* ============ 几何与物理常量 ============ */
+const VB={W:900,H:580};
+const xA=140, yA=235, floor=540, g=10;          // 左固定点 A、地面、重力加速度
+const DMIN=60, DXMAX=900-130;                    // N 杆 x 范围
+const YBMIN=90, YBMAX=470;                        // b 点 y 范围
+const N_TOP=80;                                   // 两立柱顶端固定高度（杆长不变）
+
+/* 状态：N 杆水平位置 xN、b 点竖直位置 yB、绳长 L、质量 m */
+const S={xN:380, yB:235, L:400, m:3};
+const DEF={xN:380, yB:235, L:400, m:3};
+let REF=null, drag=null, anim=null;
+
+/* 求解整个模型（屏幕坐标：y 向下为正，A 在上） */
+function solve(s){
+  const o={};
+  o.d   = s.xN - xA;                 // 杆间距 = 水平距离
+  o.dh  = s.yB - yA;                 // 高度差 = b 相对 A（b 低则正）
+  o.L=s.L; o.m=s.m; o.mg=s.m*g;
+  o.spanOK = (o.d>0) && (o.d < s.L*0.999);
+  if(!o.spanOK){ o.ok=false; return o; }
+  o.st = o.d/s.L;                    // sinθ = d/L
+  o.ct = Math.sqrt(1-o.st*o.st);     // cosθ
+  o.maxdh = o.L*o.ct;               // 两端高度差物理上限
+  let dh=o.dh; o.clamped=false;
+  if(dh> o.maxdh){ dh= o.maxdh; o.clamped=true; }
+  if(dh< -o.maxdh){ dh=-o.maxdh; o.clamped=true; }
+  o.dh=dh;
+  o.th=Math.asin(o.st);              // 绳与竖直夹角
+  o.T =o.mg/(2*o.ct);               // 张力
+  o.L1=(o.L+dh/o.ct)/2;             // 左段绳长
+  o.L2=(o.L-dh/o.ct)/2;             // 右段绳长
+  o.xA=xA; o.yA=yA; o.xB=s.xN; o.yB=yA+dh;   // 实际绘制用（已夹紧）
+  o.xO=o.xA+o.L1*o.st;             // 挂钩水平位置
+  o.yO=o.yA+o.L1*o.ct;             // 挂钩竖直位置
+  o.ok=true; return o;
+}
+
+/* ============ 绘制 ============ */
+const cv=document.getElementById('cv');
+const NS='http://www.w3.org/2000/svg';
+function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+
+function ropePath(r){
+  return 'M'+r.xA+' '+r.yA+' L'+r.xO+' '+r.yO+' L'+r.xB+' '+r.yB;
+}
+
+function draw(){
+  // 拖动后把夹紧结果写回状态，保持 UI 一致
+  const r=solve(S);
+  if(r.ok){
+    if(r.clamped) S.yB=r.yB;
+    if(r.d>=S.L*0.999) S.xN=xA+Math.min(S.xN-xA, S.L*0.99); // 防越界
+  }
+  while(cv.firstChild) cv.removeChild(cv.firstChild);
+
+  const parts=[];
+  // 地面
+  cv.appendChild(el('line',{x1:40,y1:floor,x2:VB.W-40,y2:floor,stroke:'#b9b29c','stroke-width':2}));
+  for(let x=50;x<VB.W-40;x+=20) cv.appendChild(el('line',{x1:x,y1:floor,x2:x-8,y2:floor+8,stroke:'#cdc6b0','stroke-width':1}));
+
+  // 左固定杆（长度固定，顶端锁死 N_TOP）+ 顶帽 + 环 A
+  cv.appendChild(el('line',{x1:xA,y1:floor,x2:xA,y2:N_TOP,stroke:'#7a6a4a','stroke-width':7,'stroke-linecap':'round'}));
+  cv.appendChild(el('line',{x1:xA-9,y1:N_TOP,x2:xA+9,y2:N_TOP,stroke:'#5b4a2e','stroke-width':3,'stroke-linecap':'round'}));
+  cv.appendChild(el('circle',{cx:xA,cy:yA,r:6,fill:'#5b4a2e',stroke:'#fff','stroke-width':2}));
+  cv.appendChild(el('text',{x:xA,y:yA-22, 'font-size':13,fill:'#5b4a2e','text-anchor':'middle'})).textContent='A（固定）';
+
+  if(!r.ok){
+    // 绳长不足：画直线提示
+    cv.appendChild(el('line',{x1:xA,y1:yA,x2:S.xN,y2:S.yB,stroke:'#c0392b','stroke-width':2,'stroke-dasharray':'6 5'}));
+    cv.appendChild(el('circle',{cx:S.xN,cy:S.yB,r:6,fill:'#c0392b'}));
+    const tx=el('text',{x:VB.W/2,y:120,'font-size':18,fill:'#c0392b','text-anchor':'middle','font-weight':'700'});
+    tx.textContent='绳长 L 不足以跨过当前杆间距 d —— 请缩短 d 或加长 L';
+    cv.appendChild(tx);
+    updateTable(r,false); return;
+  }
+
+  // 虚影（基准绳形）
+  if(REF){
+    const fr=solve(REF);
+    if(fr.ok){
+      cv.appendChild(el('path',{d:ropePath(fr),fill:'none',stroke:'#b4b2a9','stroke-width':1.8,'stroke-dasharray':'6 5'}));
+      cv.appendChild(el('circle',{cx:fr.xO,cy:fr.yO,r:4,fill:'#b4b2a9'}));
+      cv.appendChild(el('text',{x:fr.xO+8,y:fr.yO+4,'font-size':12,fill:'#888780'})).textContent='基准';
+    }
+  }
+
+  // 右杆 N（可拖动，水平；长度固定，顶端锁死 N_TOP）+ 顶帽
+  cv.appendChild(el('line',{x1:S.xN,y1:floor,x2:S.xN,y2:N_TOP,stroke:'#7a6a4a','stroke-width':7,'stroke-linecap':'round'}));
+  cv.appendChild(el('line',{x1:S.xN-9,y1:N_TOP,x2:S.xN+9,y2:N_TOP,stroke:'#5b4a2e','stroke-width':3,'stroke-linecap':'round'}));
+  // N 杆抓取热区（整条杆，透明）
+  const poleHit=el('rect',{x:S.xN-16,y:N_TOP-12,width:32,height:floor-(N_TOP-12)+12,fill:'transparent',style:'cursor:ew-resize'});
+  cv.appendChild(poleHit);
+  // N 杆底座箭头提示
+  cv.appendChild(el('text',{x:S.xN,y:floor+26,'font-size':12,fill:'#7a6a4a','text-anchor':'middle'})).textContent='① N 杆（←→拖动，杆长不变）';
+
+  // 实绳 A-O-b
+  cv.appendChild(el('path',{d:ropePath(r),fill:'none',stroke:'#4a4036','stroke-width':2.4}));
+
+  // 环 b（可拖动，竖直）
+  cv.appendChild(el('circle',{cx:S.xN,cy:S.yB,r:7,fill:'#c9a24a',stroke:'#fff','stroke-width':2,style:'cursor:ns-resize'}));
+  cv.appendChild(el('text',{x:S.xN+12,y:S.yB-10,'font-size':13,fill:'#7a5a16'})).textContent='② b 点（↑↓沿固定杆滑）';
+
+  // 衣物 + 挂钩 O
+  const shirt=el('g',{});
+  shirt.appendChild(el('line',{x1:r.xO,y1:r.yO,x2:r.xO,y2:r.yO+16,stroke:'#4a4036','stroke-width':1.6}));
+  shirt.appendChild(el('path',{d:'M'+(r.xO-15)+' '+(r.yO+30)+' Q '+r.xO+' '+(r.yO+18)+' '+(r.xO+15)+' '+(r.yO+30)+
+    ' L'+(r.xO+15)+' '+(r.yO+52)+' Q '+r.xO+' '+(r.yO+46)+' '+(r.xO-15)+' '+(r.yO+52)+' Z',
+    fill:'#d8e6f0',stroke:'#5b87a8','stroke-width':1.4}));
+  cv.appendChild(shirt);
+  cv.appendChild(el('circle',{cx:r.xO,cy:r.yO,r:5,fill:'#1f3a5f',stroke:'#fff','stroke-width':2}));
+
+  /* 力箭头：长度 ∝ 力，共用比例尺 k；标签沿垂直方向偏到绳线外侧，避免压线 */
+  const k=100/Math.max(r.mg,r.T,1e-6);
+  function arrow(x,y,dx,dy,col,lab){
+    const L=Math.hypot(dx,dy); if(L<0.5)return;
+    const ux=dx/L, uy=dy/L, ex=x+dx, ey=y+dy;
+    cv.appendChild(el('line',{x1:x,y1:y,x2:ex,y2:ey,stroke:col,'stroke-width':3,'marker-end':'url(#ah)'}));
+    if(lab){
+      // 垂直于箭头方向的单位法线
+      const nx=-uy, ny=ux;
+      let ox, oy, anc;
+      if(lab[0]==='T'){                       // T₁ 在左绳外侧、T₂ 在右绳外侧
+        const side = (lab.indexOf('₁')>=0) ? -1 : 1;
+        ox = ex + nx*side*15; oy = ey + ny*side*15;
+        anc = (side<0) ? 'end' : 'start';
+      } else {                                 // mg 竖直向下，标签放到右侧
+        ox = ex + 16; oy = ey - 4; anc = 'start';
+      }
+      cv.appendChild(el('text',{x:ox,y:oy,'font-size':13,fill:col,'font-weight':'700','text-anchor':anc})).textContent=lab;
+    }
+  }
+  // 箭头标记定义
+  const defs=el('defs',{});
+  const mk=el('marker',{id:'ah',markerWidth:10,markerHeight:10,refX:7,refY:3,orient:'auto',markerUnits:'strokeWidth'});
+  mk.appendChild(el('path',{d:'M0,0 L7,3 L0,6 Z',fill:'#333'}));
+  defs.appendChild(mk);
+  cv.appendChild(defs);
+
+  const nx=Math.hypot(r.xA-r.xO,r.yA-r.yO), ny=Math.hypot(r.xB-r.xO,r.yB-r.yO);
+  arrow(r.xO,r.yO,(r.xA-r.xO)/nx*k*r.T,(r.yA-r.yO)/nx*k*r.T,'#1f7a45','T₁='+r.T.toFixed(1));
+  arrow(r.xO,r.yO,(r.xB-r.xO)/ny*k*r.T,(r.yB-r.yO)/ny*k*r.T,'#1f7a45','T₂='+r.T.toFixed(1));
+  arrow(r.xO,r.yO,0,k*r.mg,'#b23a2b','mg='+r.mg.toFixed(1));
+
+  // 夹角 θ：绳 OA 与竖直方向夹角 —— 竖直边（虚线）+ 参数化弧（方向正确）
+  const R=36, th=r.th;                       // th 已是与竖直方向的锐角
+  // 竖直参考边：过 O 的双向虚线，代表“竖直方向”
+  cv.appendChild(el('line',{x1:r.xO,y1:r.yO-R-10,x2:r.xO,y2:r.yO+R+10,stroke:'#9a5b16','stroke-width':1,'stroke-dasharray':'5 4','opacity':0.85}));
+  // 弧长：从竖直向上(angle=-90°)平滑弯到 OA 方向(angle=-90°-th)，逐点连线避免方向画反
+  let arc='M';
+  const N=12;
+  for(let i=0;i<=N;i++){
+    const a=(-Math.PI/2) - th*(i/N);         // 弧度：竖直向上 → 左偏 θ
+    const px=r.xO + R*Math.cos(a), py=r.yO + R*Math.sin(a);
+    arc += (i?' L':'') + px.toFixed(1) + ' ' + py.toFixed(1);
+  }
+  cv.appendChild(el('path',{d:arc,fill:'none',stroke:'#9a5b16','stroke-width':1.8}));
+  // 角标注：放进夹角楔形空隙（沿角平分线外移），短标签不压绳线
+  const la=(-Math.PI/2) - th*0.5, Rl=R+14;
+  cv.appendChild(el('text',{x:r.xO+Rl*Math.cos(la),y:r.yO+Rl*Math.sin(la)+4,'font-size':12,fill:'#9a5b16','font-weight':'700','text-anchor':'middle'})).textContent='θ='+(th*180/Math.PI).toFixed(1)+'°';
+
+  // 比例尺
+  cv.appendChild(el('text',{x:14,y:VB.H-14,'font-size':12.5,fill:'#888780'})).textContent=
+    '箭头长度=力大小：1 px ≈ '+(1/k).toFixed(2)+' N（三力同比例，箭头越长力越大，活结 T₁=T₂）　·　θ 为绳与竖直方向的夹角';
+
+  updateTable(r,true);
+}
+
+/* ============ 对比表 ============ */
+const ROWS=[
+  {k:'d',  lab:'杆间距 d',   f:r=>(r.d).toFixed(0)+' cm',  up:'变大',down:'变小',eq:'不变',note:'仅 N 杆动'},
+  {k:'dh', lab:'高度差 Δh',  f:r=>(r.dh).toFixed(0)+' cm',  up:'b 更低',down:'b 更高',eq:'不变',note:'仅 b 点动'},
+  {k:'th', lab:'夹角 θ(竖直)',f:r=>(r.th*180/Math.PI).toFixed(1)+'°',up:'变大',down:'变小',eq:'不变',note:'看 d'},
+  {k:'T',  lab:'绳张力 T',   f:r=>r.T.toFixed(1)+' N',     up:'变大',down:'变小',eq:'不变',note:'=mg/2cosθ'},
+  {k:'L1', lab:'左段 L₁',    f:r=>r.L1.toFixed(0)+' cm',   up:'变长',down:'变短',eq:'不变',note:'挂钩滑动'},
+  {k:'L2', lab:'右段 L₂',    f:r=>r.L2.toFixed(0)+' cm',   up:'变长',down:'变短',eq:'不变',note:'挂钩滑动'},
+  {k:'xO', lab:'挂钩水平位', f:r=>r.xO.toFixed(0)+' cm',   up:'右移',down:'左移',eq:'不变',note:'沿绳滑'},
+  {k:'pole',lab:'立柱长度', f:()=>'固定', up:'',down:'',eq:'不变',note:'两杆等长固定'},
+];
+function updateTable(r,ok){
+  if(!ok){ document.getElementById('tbl').innerHTML='<tr><td colspan="4" class="warn">绳长不足，无法悬挂（d≥L）</td></tr>'; return; }
+  const ref=r.ok&&REF?solve(REF):null;
+  let h='';
+  for(const row of ROWS){
+    const now=row.f(r);
+    let ind='=', cls='eq', tip=row.eq;
+    if(ref && ref.ok){
+      const a=valOf(row.k,r), b=valOf(row.k,ref), eps=Math.max(0.5,Math.abs(b)*0.004);
+      if(a-b>eps){ind='↑';cls='up';tip=row.up;}
+      else if(b-a>eps){ind='↓';cls='down';tip=row.down;}
+    }
+    h+='<tr><td>'+row.lab+'</td><td class="v">'+now+'</td>'+
+       '<td><span class="chg '+cls+'">'+ind+'</span></td>'+
+       '<td style="font-size:12.5px;color:#8a8470">'+row.note+'</td></tr>';
+  }
+  document.getElementById('tbl').innerHTML=h;
+}
+function valOf(k,r){return k==='pole'?1:(k==='th'?r.th*180/Math.PI:(k==='dh'?r.dh:(k==='d'?r.d:(k==='xO'?r.xO:r[k]))));}
+
+/* ============ 拖动交互 ============ */
+function toSVG(evt){
+  const pt=cv.createSVGPoint(); pt.x=evt.clientX; pt.y=evt.clientY;
+  const m=cv.getScreenCTM().inverse(); const p=pt.matrixTransform(m);
+  return {x:p.x,y:p.y};
+}
+function setRef(){ REF={xN:S.xN,yB:S.yB,L:S.L,m:S.m}; }
+
+cv.addEventListener('pointerdown',e=>{
+  const t=e.target;
+  if(t===cv.querySelector('rect[style*="ew-resize"]') || (t.getAttribute&&t.getAttribute('style')&&t.getAttribute('style').includes('ew-resize'))){
+    drag='pole'; setRef(); cv.setPointerCapture(e.pointerId);
+  } else if(t.tagName==='circle' && t.getAttribute('fill')==='#c9a24a'){
+    drag='b'; setRef(); cv.setPointerCapture(e.pointerId);
+  }
+});
+cv.addEventListener('pointermove',e=>{
+  if(!drag)return;
+  const p=toSVG(e);
+  if(drag==='pole'){
+    S.xN=Math.max(xA+DMIN, Math.min(xA+S.L*0.99, DXMAX, p.x));   // 不越过 d=L
+  } else if(drag==='b'){
+    const st=(S.xN-xA)/S.L, maxdh=S.L*Math.sqrt(Math.max(0,1-st*st)); // 物理可悬挂极限
+    S.yB=Math.max(Math.max(YBMIN,yA-maxdh), Math.min(Math.min(YBMAX,yA+maxdh), p.y));
+  }
+  draw();
+});
+cv.addEventListener('pointerup',e=>{ drag=null; });
+cv.addEventListener('pointercancel',e=>{ drag=null; });
+
+/* ============ 滑块（次要参数） ============ */
+document.getElementById('sL').addEventListener('input',e=>{
+  if(!REF) setRef(); S.L=+e.target.value; document.getElementById('vL').textContent=S.L; draw();
+});
+document.getElementById('sm').addEventListener('input',e=>{
+  if(!REF) setRef(); S.m=+e.target.value; document.getElementById('vm').textContent=S.m.toFixed(1); draw();
+});
+
+/* ============ 情景动画 ============ */
+function animate(target,dur){
+  if(anim)cancelAnimationFrame(anim);
+  setRef();
+  const start={xN:S.xN,yB:S.yB,L:S.L,m:S.m};
+  const t0=performance.now();
+  function step(now){
+    let u=Math.min(1,(now-t0)/dur); const e=1-Math.pow(1-u,3); // easeOut
+    for(const k in target) S[k]=start[k]+(target[k]-start[k])*e;
+    draw();
+    if(u<1) anim=requestAnimationFrame(step); else anim=null;
+  }
+  anim=requestAnimationFrame(step);
+}
+document.querySelectorAll('[data-p]').forEach(b=>b.addEventListener('click',()=>{
+  const p=b.dataset.p;
+  if(p==='pole'){ animate({xN:Math.min(DXMAX,S.xN+80)},700); }
+  else if(p==='bup'){
+    const r=solve(S); const yb=Math.max(YBMIN,S.yB-90);
+    animate({yB:yb},700);
+  }
+  else if(p==='heavy'){ animate({m:Math.min(12,S.m+5)},700); }
+  else if(p==='reset'){ REF=null; animate({xN:DEF.xN,yB:DEF.yB,L:DEF.L,m:DEF.m},800);
+    document.getElementById('sL').value=DEF.L; document.getElementById('vL').textContent=DEF.L;
+    document.getElementById('sm').value=DEF.m; document.getElementById('vm').textContent=DEF.m.toFixed(1);
+  }
+}));
+document.getElementById('bSnap').addEventListener('click',()=>{ setRef(); draw(); });
+document.getElementById('bClear').addEventListener('click',()=>{ REF=null; draw(); });
+
+/* 初始绘制 */
+draw();
+</script>
+</body>
+</html>

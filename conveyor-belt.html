@@ -173,7 +173,7 @@ function defs(){
 function drawVT(m){
   var S=m.S, P=m.P;
   var s='', x0=52, x1=400, y0=22, y1=248;
-  var tMax=Math.max(S.tEnd,0.5);
+  var tMax=Math.max(S.tStop,0.5);
   var i, vlo=0, vhi=Math.max(P.v0,P.vb,0), sv;
   for(i=0;i<=80;i++){ sv=m.state(S.tEnd*i/80).v; if(sv<vlo)vlo=sv; if(sv>vhi)vhi=sv; }
   // 选择正方向：以物块速度的主要方向为“正”，使图线主要落在 t 轴上方、更直观
@@ -197,9 +197,9 @@ function drawVT(m){
   if(vMin<-0.01) s+='<line x1="'+x0+'" y1="'+vy(0).toFixed(1)+'" x2="'+x1+'" y2="'+vy(0).toFixed(1)+'" stroke="#D1D5DB" stroke-width="1.5"/>';
   for(i=0;i<=4;i++){ var gt=tMax*i/4, gx=tx(gt); s+='<text x="'+gx.toFixed(1)+'" y="'+(y1+16)+'" font-size="11" fill="#9CA3AF" text-anchor="middle">'+gt.toFixed(1)+'</text>'; }
   var pts=[], N=160;
-  for(i=0;i<=N;i++){ var tt=S.tEnd*i/N, stt=m.state(tt); pts.push(tx(tt).toFixed(1)+','+vy(sgn*stt.v).toFixed(1)); }
+  for(i=0;i<=N;i++){ var tt=S.tStop*i/N, stt=m.state(tt); pts.push(tx(tt).toFixed(1)+','+vy(sgn*stt.v).toFixed(1)); }
   s+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="#B5D4F4" stroke-width="2.5"/>';
-  var pd=[], M=120, tE2=Math.min(t,S.tEnd);
+  var pd=[], M=120, tE2=Math.min(t,S.tStop);
   for(i=0;i<=M;i++){ var tt2=tE2*i/M, st2=m.state(tt2); pd.push(tx(tt2).toFixed(1)+','+vy(sgn*st2.v).toFixed(1)); }
   if(pd.length>1) s+='<polyline points="'+pd.join(' ')+'" fill="none" stroke="#185FA5" stroke-width="2.5"/>';
   s+='<line x1="'+x0+'" y1="'+vy(sgn*P.vb).toFixed(1)+'" x2="'+x1+'" y2="'+vy(sgn*P.vb).toFixed(1)+'" stroke="#6B7280" stroke-width="1.5" stroke-dasharray="5 4"/>';
@@ -323,7 +323,7 @@ var MH = {
   evts:function(){
     var S=this.S, e=[];
     if(S.common && !S.vEqual) e.push({t:S.t1, msg:'共速！物块与传送带速度相同，摩擦力立即归零，此后一起匀速。'});
-    e.push({t:S.tEnd, msg:(S.exit==='A'?'物块冲过全程，从 A 端滑落。':'物块从 B 端离开传送带。')});
+    e.push({t:S.tStop, msg:(S.exit==='A'?'物块冲过全程，从 A 端滑离传送带。':'物块从 B 端离开传送带。')});
     return e;
   },
   drawScene:function(tt){
@@ -338,12 +338,14 @@ var MH = {
     var k,u,p,p2;
     for(k=-24;k<=24;k++){ u=m.PXM*(m.S.X0+k+m.P.vb*tt); p=m.pos(u); s+='<line x1="'+p.x.toFixed(1)+'" y1="'+p.y.toFixed(1)+'" x2="'+(p.x+p.nx*7).toFixed(1)+'" y2="'+(p.y+p.ny*7).toFixed(1)+'" stroke="#9CA3AF" stroke-width="1.5"/>'; }
     s += drawScratches(m, 0, tt, 7);
-    var bx=m.XA+Math.max(-0.35,Math.min(m.P.L+0.35,st.X))*m.PXM, by=m.YB-24;
+    var offBelt = tt > m.S.tEnd + 1e-9;
+    var bxPhys = st.X + (offBelt ? m.S.vexit*(tt - m.S.tEnd) : 0);
+    var bx=m.XA+Math.max(-1.6,Math.min(m.P.L+1.6,bxPhys))*m.PXM, by=m.YB-24;
     s+='<rect x="'+(bx-15)+'" y="'+by+'" width="30" height="24" fill="#378ADD" stroke="#185FA5" stroke-width="1" rx="2"/>';
     var cx=bx, cyy=by+12;
     s+=arrL(cx,cyy,cx,cyy+m.P.m*G*m.FS,'#E24B4A',2.5,'G');
-    s+=arrL(cx,cyy,cx,cyy-m.P.m*G*m.FS,'#185FA5',2.5,'N');
-    if(Math.abs(st.f)>1e-6){ var fl=Math.abs(st.f)*m.FS, fd=st.f>0?1:-1; s+=arrL(cx,cyy,cx+fd*fl,cyy,'#EAB308',2.5,'f'); }
+    if(!offBelt) s+=arrL(cx,cyy,cx,cyy-m.P.m*G*m.FS,'#185FA5',2.5,'N');
+    if(!offBelt && Math.abs(st.f)>1e-6){ var fl=Math.abs(st.f)*m.FS, fd=st.f>0?1:-1; s+=arrL(cx,cyy,cx+fd*fl,cyy,'#EAB308',2.5,'f'); }
     if(Math.abs(st.v)>0.05){ var vl=Math.abs(st.v)*m.VS, vd=st.v>0?1:-1; var nlen=m.P.m*G*m.FS; var voff=nlen+36, uoff=24; var vsx=cx-vd*uoff, vsy=cyy-voff; s+=arrL(vsx,vsy, vsx+vd*vl, vsy, '#EF9F27',2.5,'v'); }
     s+='<text x="'+(m.XA-18)+'" y="'+(m.YB-12)+'" font-size="13" fill="#5F5E5A">A</text>';
     s+='<text x="'+(m.XB+8)+'" y="'+(m.YB-12)+'" font-size="13" fill="#5F5E5A">B</text>';
@@ -383,8 +385,8 @@ var MI = {
     f1=(-ag*Math.sign(w0))*P.m;   // 沿带摩擦（正=向上）
     var t1=Infinity;
     if(Math.abs(a1)>1e-12){ var tt=(P.vb-P.v0)/a1; if(tt>1e-9) t1=tt; }
-    function rootsEnd(x_target){ var A=0.5*a1,B=P.v0,C=X0-x_target; if(Math.abs(A)<1e-12){ if(Math.abs(B)>1e-12){var r=(x_target-X0)/P.v0; if(r>1e-9)return [r];} return [];} var disc=B*B-4*A*C; if(disc<0)return []; var r1=(-B+Math.sqrt(disc))/(2*A),r2=(-B-Math.sqrt(disc))/(2*A); var out=[]; if(r1>1e-9)out.push(r1); if(r2>1e-9)out.push(r2); return out; }
-    var ends=rootsEnd(0).concat(rootsEnd(P.L));
+    function rootsEnd(x_target,a,v0,x0){ var A=0.5*a,B=v0,C=x0-x_target; if(Math.abs(A)<1e-12){ if(Math.abs(B)>1e-12){var r=(x_target-x0)/B; if(r>1e-9)return [r];} return [];} var disc=B*B-4*A*C; if(disc<0)return []; var r1=(-B+Math.sqrt(disc))/(2*A),r2=(-B-Math.sqrt(disc))/(2*A); var out=[]; if(r1>1e-9)out.push(r1); if(r2>1e-9)out.push(r2); return out; }
+    var ends=rootsEnd(0,a1,P.v0,X0).concat(rootsEnd(P.L,a1,P.v0,X0));
     var te=ends.length?Math.min.apply(null,ends):Infinity;
     var initOut=null;
     if(X0<=1e-9 && (P.v0 < -1e-9 || (Math.abs(P.v0)<1e-9 && a1 < -1e-9))) initOut='A';
@@ -394,7 +396,7 @@ var MI = {
     if(S.vEqual){
       if(gpar<=P.mu*G*cosT){ S.tEnd=Math.abs((P.L-X0)/P.vb); S.segs=[{t0:0,v0:P.vb,a:0,x0:X0,f:P.m*gpar}]; S.common=true; S.t1=0; S.X1=X0; S.drel1=0; return S; }
       var a2e=ag-gpar, f2e=P.m*ag;
-      var e2e=rootsEnd(0).concat(rootsEnd(P.L));
+      var e2e=rootsEnd(0,a2e,P.vb,X0).concat(rootsEnd(P.L,a2e,P.vb,X0));
       var te2e=e2e.length?Math.min.apply(null,e2e):Infinity;
       var xe2e=X0+P.vb*te2e+0.5*a2e*te2e*te2e;
       S.segs=[{t0:0,v0:P.vb,a:a2e,x0:X0,f:f2e}]; S.tEnd=te2e; S.exit=(xe2e<=0.001)?'A':'B'; return S;
@@ -413,7 +415,7 @@ var MI = {
         S.common=true;
         var a2=ag-gpar, f2=P.m*ag;
         S.segs.push({t0:t1,v0:P.vb,a:a2,x0:x1,f:f2});
-        var e2=rootsEnd(0).concat(rootsEnd(P.L));
+        var e2=rootsEnd(0,a2,P.vb,x1).concat(rootsEnd(P.L,a2,P.vb,x1));
         var te2=e2.length?Math.min.apply(null,e2):Infinity;
         S.tEnd=t1+te2;
         var xe=x1+P.vb*te2+0.5*a2*te2*te2;
@@ -442,7 +444,7 @@ var MI = {
   evts:function(){
     var S=this.S, e=[];
     if(S.common && !S.vEqual) e.push({t:S.t1, msg:'共速！物块与传送带速度相同。此时看 μ 与 tanθ：若 μ≥tanθ，静摩擦托住一起匀速；若 μ<tanθ，摩擦不足以平衡重力下滑分力，物块将反向加速下滑，摩擦力方向翻转。'});
-    e.push({t:S.tEnd, msg:(S.exit==='A'?'物块滑回 A 端（底端）离开传送带。':'物块到达 B 端（顶端）离开传送带。')});
+    e.push({t:S.tStop, msg:(S.exit==='A'?'物块滑回 A 端（底端）离开传送带。':'物块到达 B 端（顶端）离开传送带。')});
     return e;
   },
   drawScene:function(tt){
@@ -458,7 +460,8 @@ var MI = {
     s+='<g transform="rotate('+rot.toFixed(1)+' '+cB.x.toFixed(1)+' '+cB.y.toFixed(1)+')"><line x1="'+(cB.x-m.R+5).toFixed(1)+'" y1="'+cB.y.toFixed(1)+'" x2="'+(cB.x+m.R-5).toFixed(1)+'" y2="'+cB.y.toFixed(1)+'" stroke="#B4B2A9" stroke-width="2"/><line x1="'+cB.x.toFixed(1)+'" y1="'+(cB.y-m.R+5).toFixed(1)+'" x2="'+cB.x+'" y2="'+(cB.y+m.R-5).toFixed(1)+'" stroke="#B4B2A9" stroke-width="2"/></g>';
     for(i=-30;i<=30;i++){ u=m.PXM*(m.S.X0+i+m.P.vb*tt); p=m.pos(u,th); s+='<line x1="'+p.x.toFixed(1)+'" y1="'+p.y.toFixed(1)+'" x2="'+(p.x+p.nx*7).toFixed(1)+'" y2="'+(p.y+p.ny*7).toFixed(1)+'" stroke="#9CA3AF" stroke-width="1.5"/>'; }
     s += drawScratches(m, th, tt, 6);
-    var localU=m.PXM*st.X;
+    var offBelt = tt > m.S.tEnd + 1e-9;
+    var localU=m.PXM*st.X + (offBelt ? m.S.vexit*(tt - m.S.tEnd)*m.PXM : 0);
     var contact=m.rotI(m.XA+localU, m.YB, th);
     var cosT=Math.cos(th), sinT=Math.sin(th);
     var ub=m.rotV(1,0,th), nb=m.rotV(0,-1,th);           // ub：沿带向上；nb：垂直带面指向“带上方”
@@ -471,8 +474,8 @@ var MI = {
     s+='<polygon points="'+corners+'" fill="#378ADD" stroke="#185FA5" stroke-width="1"/>';
     // 三力从方块中心发出：重力竖直向下，支持力垂直带面向上，摩擦力沿带
     s+=arrL(cx,cy, cx, cy+m.P.m*G*m.FS, '#E24B4A',2.5,'G');                              // 重力 G=mg
-    s+=arrL(cx,cy, cx+nb.x*m.P.m*G*cosT*m.FS, cy+nb.y*m.P.m*G*cosT*m.FS, '#185FA5',2.5,'N');  // 支持力 N=mg·cosθ
-    if(Math.abs(st.f)>1e-6){ var fl=Math.abs(st.f)*m.FS, fd=st.f>0?1:-1; s+=arrL(cx,cy, cx+fd*ub.x*fl, cy+fd*ub.y*fl, '#EAB308',2.5,'f'); }
+    if(!offBelt) s+=arrL(cx,cy, cx+nb.x*m.P.m*G*cosT*m.FS, cy+nb.y*m.P.m*G*cosT*m.FS, '#185FA5',2.5,'N');  // 支持力 N=mg·cosθ
+    if(!offBelt && Math.abs(st.f)>1e-6){ var fl=Math.abs(st.f)*m.FS, fd=st.f>0?1:-1; s+=arrL(cx,cy, cx+fd*ub.x*fl, cy+fd*ub.y*fl, '#EAB308',2.5,'f'); }
     if(Math.abs(st.v)>0.05){ var vl=Math.abs(st.v)*m.VS, vd=st.v>0?1:-1; var nlen=m.P.m*G*cosT*m.FS; var voff=nlen+16, uoff=46; var vsx=cx+nb.x*voff+ub.x*uoff, vsy=cy+nb.y*voff+ub.y*uoff; s+=arrL(vsx,vsy, vsx+vd*ub.x*vl, vsy+vd*ub.y*vl, '#EF9F27',2.5,'v'); }
     var lA=m.rotI(m.XA,m.YB,th), lB=m.rotI(m.XB,m.YB,th);
     s+='<text x="'+(lA.x-22).toFixed(1)+'" y="'+(lA.y+12).toFixed(1)+'" font-size="13" fill="#5F5E5A">A</text>';
@@ -505,7 +508,15 @@ function drawBar(m,s,st){
 
 /* ===================== 顶层调度 ===================== */
 function curModel(){ return cur==='H'?MH:MI; }
-function recalc(){ var m=curModel(); m.S=m.solve(); resetPlay(); }
+function recalc(){
+  var m=curModel(); m.S=m.solve();
+  var S=m.S, spd=Math.abs(m.state(S.tEnd).v);   // 离开带端瞬间的速度
+  S.vexit = m.state(S.tEnd).v;
+  // 离开带端后，让物块以离开速度继续滑出一小段（约 0.9 m），再停止；便于学生看清“离开”
+  S.texit = spd<0.1 ? 0 : Math.min(1.2, Math.max(0.3, 0.9/spd));
+  S.tStop = S.tEnd + S.texit;
+  resetPlay();
+}
 function resetPlay(){ t=0; fired=[]; document.getElementById('btnPlay').textContent='播放 ▶'; document.getElementById('hint').className='hint'; slider.value=0; render(); }
 function render(){ var m=curModel(); m.drawScene(t); drawVT(m); drawNums(m); }
 function chk(){
@@ -566,12 +577,12 @@ tabs.forEach(function(tb){
 /* 控件 */
 document.getElementById('btnPlay').onclick=function(){
   var m=curModel();
-  if(t>=m.S.tEnd-1e-9){ t=0; fired=[]; }
+  if(t>=m.S.tStop-1e-9){ t=0; fired=[]; }
   playing=!playing; this.textContent=playing?'暂停 ‖':'继续播放 ▶';
   document.getElementById('hint').className='hint'; last=performance.now();
 };
 document.getElementById('btnReset').onclick=function(){ playing=false; resetPlay(); };
-slider.oninput=function(){ playing=false; document.getElementById('btnPlay').textContent='继续播放 ▶'; t=curModel().S.tEnd*(this.value/1000); render(); };
+slider.oninput=function(){ playing=false; document.getElementById('btnPlay').textContent='继续播放 ▶'; t=curModel().S.tStop*(this.value/1000); render(); };
 document.getElementById('spd').onchange=function(){ speed=parseFloat(this.value); };
 document.getElementById('btnFwd').onclick=function(){ curModel().v0dir=1; updV0(); };
 document.getElementById('btnRev').onclick=function(){ curModel().v0dir=-1; updV0(); };
@@ -589,8 +600,8 @@ function loop(now){
   var m=curModel();
   if(playing){
     t+=dt*speed;
-    if(t>=m.S.tEnd) t=m.S.tEnd;
-    slider.value=Math.round(1000*t/m.S.tEnd);
+    if(t>=m.S.tStop){ t=m.S.tStop; }
+    slider.value=Math.round(1000*t/m.S.tStop);
     chk();
   }
   m.drawScene(t); drawVT(m); drawNums(m);

@@ -258,8 +258,11 @@ function drawScratches(m, th, tt, sw){
     else drel1 = S.X1 - S.X0 - P.vb*S.t1;
   }
   var off = 7, s='';
-  // 紫色：共速前的相对滑动在带上留下的划痕
-  var pA = S.X0 + Math.min(0, drel1), pB = S.X0 + Math.max(0, drel1);
+  // 紫色：共速前物块在带上蹭过的划痕，必须随动画「同步」增长——
+  // t<t1 用当前相对位移 drelNow（物块走到哪、划痕跟到哪）；共速后才固定为共速时刻全长 drel1。
+  // 之前误用 drel1 当范围，导致 t=0 物块刚放下、共速前物块还在半路时，划痕就超前铺满全程。
+  var drelPurple = (S.common && !S.vEqual && tt >= S.t1 - 1e-9) ? drel1 : drelNow;
+  var pA = S.X0 + Math.min(0, drelPurple), pB = S.X0 + Math.max(0, drelPurple);
   if(Math.abs(pB-pA)*m.PXM > 1) s += beltPolyline(m, th, tt, pA, pB, 0, '#7F77DD', sw);
   // 红色：共速后若仍打滑（如 μ<tanθ 反向下滑），沿带面法向偏移，与紫色错开，避免重叠难辨
   if(S.common && !S.vEqual && Math.abs(drelNow) > Math.abs(drel1)+0.02){

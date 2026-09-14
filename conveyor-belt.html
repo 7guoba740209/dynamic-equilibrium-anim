@@ -173,8 +173,10 @@ function drawVT(m){
   var S=m.S, P=m.P;
   var s='', x0=52, x1=400, y0=22, y1=248;
   var tMax=Math.max(S.tEnd,0.5);
-  var vMax=Math.max(P.v0,P.vb,1)*1.3, vMin=Math.min(0,P.v0)*1.15;
-  if(vMax-vMin<1) vMax=vMin+1;
+  var i, vlo=0, vhi=Math.max(P.v0,P.vb,0), sv;
+  for(i=0;i<=80;i++){ sv=m.state(S.tEnd*i/80).v; if(sv<vlo)vlo=sv; if(sv>vhi)vhi=sv; }
+  var vMin=Math.min(0,vlo)*1.12, vMax=Math.max(0,vhi,P.vb)*1.12+0.6;
+  if(vMax-vMin<1.2) vMax=vMin+1.2;
   function tx(tt){ return x0+(tt/tMax)*(x1-x0); }
   function vy(vv){ return y1-((vv-vMin)/(vMax-vMin))*(y1-y0); }
   s+='<line x1="'+x0+'" y1="'+y0+'" x2="'+x0+'" y2="'+y1+'" stroke="#888780" stroke-width="1"/>';
@@ -337,7 +339,11 @@ var MI = {
     function rootsEnd(x_target){ var A=0.5*a1,B=P.v0,C=X0-x_target; if(Math.abs(A)<1e-12){ if(Math.abs(B)>1e-12){var r=(x_target-X0)/P.v0; if(r>1e-9)return [r];} return [];} var disc=B*B-4*A*C; if(disc<0)return []; var r1=(-B+Math.sqrt(disc))/(2*A),r2=(-B-Math.sqrt(disc))/(2*A); var out=[]; if(r1>1e-9)out.push(r1); if(r2>1e-9)out.push(r2); return out; }
     var ends=rootsEnd(0).concat(rootsEnd(P.L));
     var te=ends.length?Math.min.apply(null,ends):Infinity;
-    var S={P:P, th:th, sinT:sinT, cosT:cosT, ag:ag, gpar:gpar, X0:X0, t1:Infinity, X1:null, common:false, vEqual:Math.abs(P.v0-P.vb)<1e-9, tEnd:te, exit:te<Infinity?((X0+P.v0*te+0.5*a1*te*te)<=0.001?'A':'B'):'B', segs:[], drel1:0};
+    var initOut=null;
+    if(X0<=1e-9 && (P.v0 < -1e-9 || (Math.abs(P.v0)<1e-9 && a1 < -1e-9))) initOut='A';
+    else if(X0>=P.L-1e-9 && (P.v0 > 1e-9 || (Math.abs(P.v0)<1e-9 && a1 > 1e-9))) initOut='B';
+    var teUse = initOut ? 1e-3 : te;
+    var S={P:P, th:th, sinT:sinT, cosT:cosT, ag:ag, gpar:gpar, X0:X0, t1:Infinity, X1:null, common:false, vEqual:Math.abs(P.v0-P.vb)<1e-9, tEnd:teUse, exit:initOut?initOut:(te<Infinity?((X0+P.v0*te+0.5*a1*te*te)<=0.001?'A':'B'):'B'), segs:[], drel1:0};
     if(S.vEqual){
       if(gpar<=P.mu*G*cosT){ S.tEnd=Math.abs((P.L-X0)/P.vb); S.segs=[{t0:0,v0:P.vb,a:0,x0:X0,f:P.m*gpar}]; S.common=true; S.t1=0; S.X1=X0; S.drel1=0; return S; }
       var a2e=ag-gpar, f2e=P.m*ag;
@@ -367,7 +373,7 @@ var MI = {
         S.exit=(xe<=0.001)?'A':'B';
       }
     } else {
-      S.tEnd=te;
+      S.tEnd=teUse;
     }
     return S;
   },

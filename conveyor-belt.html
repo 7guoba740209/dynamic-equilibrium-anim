@@ -238,7 +238,7 @@ var MH = {
   },
   solve:function(){
     var ag=this.P.mu*G, L=this.P.L, v0=this.P.v0, vb=this.P.vb;
-    var X0=v0>=0?0:L;
+    var X0=this.v0dir>0?0:L;
     if(Math.abs(v0-vb)<1e-9) return {a1:0, t1:0, X1:X0, tEnd:(L-X0)/vb, common:false, vEqual:true, X0:X0, exit:'B'};
     var a1=(vb>v0?1:-1)*ag;
     var t1=Math.abs(vb-v0)/ag;
@@ -327,7 +327,7 @@ var MI = {
   solve:function(){
     var P=this.P, th=P.theta*Math.PI/180, sinT=Math.sin(th), cosT=Math.cos(th);
     var ag=P.mu*G*cosT, gpar=G*sinT;
-    var X0=P.v0>=0?0:P.L;
+    var X0=this.v0dir>0?0:P.L;
     var seg0v=P.v0, a1, f1;
     var w0=P.v0-P.vb;
     a1=(-ag*Math.sign(w0))-gpar;
@@ -479,7 +479,7 @@ function syncControls(){
   var m=curModel();
   document.getElementById('pV0').value=m.v0mag;
   document.getElementById('lV0').textContent=(m.v0dir*m.v0mag).toFixed(1)+' m/s';
-  document.getElementById('dV0').textContent=(m.v0mag===0)?'（轻放）':(m.v0dir>0?'（向右 · 从 A 端放上）':'（向左 · 从 B 端滑上）');
+  document.getElementById('dV0').textContent=(m.v0mag===0)?('（轻放 · '+(m.v0dir>0?'从 A 端放上':'从 B 端滑上')+'）'):(m.v0dir>0?'（向右 · 从 A 端放上）':'（向左 · 从 B 端滑上）');
   document.getElementById('btnFwd').className='dirbtn'+(m.v0dir>0?' on':'');
   document.getElementById('btnRev').className='dirbtn'+(m.v0dir<0?' on':'');
   document.getElementById('pVB').value=Math.abs(m.P.vb);

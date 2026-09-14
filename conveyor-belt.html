@@ -73,7 +73,8 @@
       <div class="li"><span class="sw" style="background:#185FA5"></span>支持力</div>
       <div class="li"><span class="sw" style="background:#EAB308"></span>摩擦力</div>
       <div class="li"><span class="sw" style="background:#EF9F27"></span>速度</div>
-      <div class="li"><span class="sw" style="background:#7F77DD"></span>划痕</div>
+      <div class="li"><span class="sw" style="background:#7F77DD"></span>划痕（共速前）</div>
+      <div class="li"><span class="sw" style="background:#DC2626"></span>划痕（共速后）</div>
       <div class="li"><span class="sw" style="background:#9CA3AF"></span>带格线（1 m）</div>
     </div>
   </div>
@@ -227,6 +228,47 @@ function drawNums(m){
   document.getElementById('mT').textContent=st.t.toFixed(2)+' s';
 }
 
+/* ===================== 划痕绘制（共速前紫 / 共速后红） ===================== */
+// 在带面材料坐标 [mStart, mEnd]（米，绝对坐标 = X0 + 相对位移）上沿带画出划痕折线；
+// offpx 为沿带面法向的偏移量，用于把共速后红色划痕与紫色错开。
+function beltPolyline(m, th, tt, mStart, mEnd, offpx, color, w){
+  var vb=m.P.vb, LOOP=m.LOOP;
+  var pixStart = m.PXM*(mStart + vb*tt);
+  var pixEnd   = m.PXM*(mEnd   + vb*tt);
+  var total = Math.abs(pixEnd - pixStart);
+  if(total < 1) return '';
+  var drawLen = Math.min(total, LOOP-2);
+  var N = Math.max(2, Math.ceil(drawLen/6));
+  var pts=[];
+  for(var k=0;k<=N;k++){
+    var fr = total<1e-6 ? 0 : (drawLen*k/N)/total;
+    var pix = pixStart + (pixEnd - pixStart)*fr;
+    var pm = m.pos(pix, th);
+    pts.push((pm.x + pm.nx*offpx).toFixed(1)+','+(pm.y + pm.ny*offpx).toFixed(1));
+  }
+  return '<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+color+'" stroke-width="'+w+'" stroke-linejoin="round" opacity="0.92"/>';
+}
+// 计算并绘制两段划痕：共速前（紫）与共速后（红，沿法向偏移）。
+function drawScratches(m, th, tt, sw){
+  var S=m.S, P=m.P, st=m.state(tt);
+  var drelNow = st.drel;          // 当前相对位移（带材料坐标 - X0）
+  var drel1 = drelNow;            // 共速时刻的相对位移
+  if(S.common && !S.vEqual){
+    if(S.drel1 !== undefined && S.drel1 !== null) drel1 = S.drel1;
+    else drel1 = S.X1 - S.X0 - P.vb*S.t1;
+  }
+  var off = 7, s='';
+  // 紫色：共速前的相对滑动在带上留下的划痕
+  var pA = S.X0 + Math.min(0, drel1), pB = S.X0 + Math.max(0, drel1);
+  if(Math.abs(pB-pA)*m.PXM > 1) s += beltPolyline(m, th, tt, pA, pB, 0, '#7F77DD', sw);
+  // 红色：共速后若仍打滑（如 μ<tanθ 反向下滑），沿带面法向偏移，与紫色错开，避免重叠难辨
+  if(S.common && !S.vEqual && Math.abs(drelNow) > Math.abs(drel1)+0.02){
+    var rA = S.X0 + Math.min(drel1, drelNow), rB = S.X0 + Math.max(drel1, drelNow);
+    if(Math.abs(rB-rA)*m.PXM > 1) s += beltPolyline(m, th, tt, rA, rB, off, '#DC2626', sw);
+  }
+  return s;
+}
+
 /* ===================== 模型 H：水平传送带 ===================== */
 var MH = {
   PXM:72.5, basePXM:72.5, fitW:600, XA:60, XB:640, YB:200, R:24, FS:8, VS:10,
@@ -291,14 +333,7 @@ var MH = {
     s+='<g transform="rotate('+rot.toFixed(1)+' '+m.XB+' '+cyc+')"><line x1="'+(m.XB-m.R+5)+'" y1="'+cyc+'" x2="'+(m.XB+m.R-5)+'" y2="'+cyc+'" stroke="#B4B2A9" stroke-width="2"/><line x1="'+m.XB+'" y1="'+(cyc-m.R+5)+'" x2="'+m.XB+'" y2="'+(cyc+m.R-5)+'" stroke="#B4B2A9" stroke-width="2"/></g>';
     var k,u,p,p2;
     for(k=-24;k<=24;k++){ u=m.PXM*(m.S.X0+k+m.P.vb*tt); p=m.pos(u); s+='<line x1="'+p.x.toFixed(1)+'" y1="'+p.y.toFixed(1)+'" x2="'+(p.x+p.nx*7).toFixed(1)+'" y2="'+(p.y+p.ny*7).toFixed(1)+'" stroke="#9CA3AF" stroke-width="1.5"/>'; }
-    var sA=Math.min(0,st.drel), sB=Math.max(0,st.drel), len=st.scr*m.PXM;
-    if(len>1){
-      var uA=m.PXM*(m.S.X0+sA+m.P.vb*tt);
-      var drawLen=Math.min(len,m.LOOP-2);
-      var N=Math.max(2,Math.ceil(drawLen/6)), pts=[];
-      for(k=0;k<=N;k++){ p2=m.pos(uA+drawLen*k/N); pts.push(p2.x.toFixed(1)+','+p2.y.toFixed(1)); }
-      s+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="#7F77DD" stroke-width="7" stroke-linejoin="round" opacity="0.9"/>';
-    }
+    s += drawScratches(m, 0, tt, 7);
     var bx=m.XA+Math.max(-0.35,Math.min(m.P.L+0.35,st.X))*m.PXM, by=m.YB-24;
     s+='<rect x="'+(bx-15)+'" y="'+by+'" width="30" height="24" fill="#378ADD" stroke="#185FA5" stroke-width="1" rx="2"/>';
     var cx=bx, cyy=by+12;
@@ -396,8 +431,7 @@ var MI = {
     var f=seg.f;
     var drel=X-S.X0-this.P.vb*tt;
     var scr;
-    if(S.common && tt>=S.t1-1e-9) scr=Math.abs(S.drel1);
-    else scr=Math.abs(drel);
+    scr=Math.abs(drel);
     var moving=tt<S.tEnd-1e-9;
     return {t:tt, v:v, a:seg.a, X:X, f:moving?f:0, drel:drel, scr:scr, end:!moving};
   },
@@ -419,14 +453,7 @@ var MI = {
     s+='<g transform="rotate('+rot.toFixed(1)+' '+cA.x.toFixed(1)+' '+cA.y.toFixed(1)+')"><line x1="'+(cA.x-m.R+5).toFixed(1)+'" y1="'+cA.y.toFixed(1)+'" x2="'+(cA.x+m.R-5).toFixed(1)+'" y2="'+cA.y.toFixed(1)+'" stroke="#B4B2A9" stroke-width="2"/><line x1="'+cA.x.toFixed(1)+'" y1="'+(cA.y-m.R+5).toFixed(1)+'" x2="'+cA.x+'" y2="'+(cA.y+m.R-5).toFixed(1)+'" stroke="#B4B2A9" stroke-width="2"/></g>';
     s+='<g transform="rotate('+rot.toFixed(1)+' '+cB.x.toFixed(1)+' '+cB.y.toFixed(1)+')"><line x1="'+(cB.x-m.R+5).toFixed(1)+'" y1="'+cB.y.toFixed(1)+'" x2="'+(cB.x+m.R-5).toFixed(1)+'" y2="'+cB.y.toFixed(1)+'" stroke="#B4B2A9" stroke-width="2"/><line x1="'+cB.x.toFixed(1)+'" y1="'+(cB.y-m.R+5).toFixed(1)+'" x2="'+cB.x+'" y2="'+(cB.y+m.R-5).toFixed(1)+'" stroke="#B4B2A9" stroke-width="2"/></g>';
     for(i=-30;i<=30;i++){ u=m.PXM*(m.S.X0+i+m.P.vb*tt); p=m.pos(u,th); s+='<line x1="'+p.x.toFixed(1)+'" y1="'+p.y.toFixed(1)+'" x2="'+(p.x+p.nx*7).toFixed(1)+'" y2="'+(p.y+p.ny*7).toFixed(1)+'" stroke="#9CA3AF" stroke-width="1.5"/>'; }
-    var sA=Math.min(0,st.drel), sB=Math.max(0,st.drel), len=st.scr*m.PXM;
-    if(len>1){
-      var uA=m.PXM*(m.S.X0+sA+m.P.vb*tt);
-      var drawLen=Math.min(len,m.LOOP-2);
-      var N=Math.max(2,Math.ceil(drawLen/6)), pts=[];
-      for(i=0;i<=N;i++){ p2=m.pos(uA+drawLen*i/N,th); pts.push(p2.x.toFixed(1)+','+p2.y.toFixed(1)); }
-      s+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="#7F77DD" stroke-width="6" stroke-linejoin="round" opacity="0.9"/>';
-    }
+    s += drawScratches(m, th, tt, 6);
     var localU=m.PXM*st.X;
     var contact=m.rotI(m.XA+localU, m.YB, th);
     var cosT=Math.cos(th), sinT=Math.sin(th);
@@ -511,10 +538,10 @@ function updV0(){ var m=curModel(); m.P.v0=m.v0dir*m.v0mag; m.v0mag=m.v0mag; syn
 MH.init(); MI.init();
 
 /* 文案 */
-var SUB={ H:'水平传送带 · m=1 kg，g=10 m/s²　|　L、v₀、v带、μ 均可调　|　带上格线每 1 m 一格，随带移动　|　紫色划痕留在带上，绕过轮缘进入返回段',
-  I:'倾斜传送带 · m=1 kg，g=10 m/s²　|　L、θ、v₀、v带、μ、传送带转向均可调　|　命门在“共速之后”：μ≥tanθ 一起匀速；μ<tanθ 摩擦翻转、物块反向下滑　|　紫色划痕随带绕轮缘' };
+var SUB={ H:'水平传送带 · m=1 kg，g=10 m/s²　|　L、v₀、v带、μ 均可调　|　带上格线每 1 m 一格，随带移动　|　划痕留在带上：共速前紫、共速后仍打滑时红（与紫错开）',
+  I:'倾斜传送带 · m=1 kg，g=10 m/s²　|　L、θ、v₀、v带、μ、传送带转向均可调　|　命门在“共速之后”：μ≥tanθ 一起匀速；μ<tanθ 摩擦翻转、物块反向下滑　|　紫色/红色划痕（共速后下滑为红）随带绕轮缘' };
 var NOTE={ H:'<b>怎么读这张图（水平）</b><br>① 物块相对传送带滑动时，摩擦力方向与<b>相对运动方向相反</b>，大小 f=μmg；<br>② 两者<b>速度相等（共速）</b>的瞬间，摩擦力立即归零，之后一起匀速——动画会在此自动定格；<br>③ 划痕长度 = 相对位移的最大绝对值，<b>不是相对路程</b>；共速后划痕不再增长，只随带一起移动，并<b>绕过轮缘进入返回段</b>；<br>④ v-t 图中实线与虚线的<b>交点即共速点</b>，两线之间面积 = 划痕长度；<br>⑤ 初速选<b>反向</b>时，物块从 B 端向左滑上：可能减速回头共速后从 B 端离开，也可能一路冲过全程从 A 端掉落。',
-  I:'<b>怎么读这张图（倾斜）</b><br>① 沿斜面方向，物块受重力分力 mg·sinθ（向下）与摩擦力；垂直斜面受支持力 N=mg·cosθ。<br>② <b>共速瞬间是判据转折点</b>：比较 μ 与 tanθ。μ≥tanθ 时静摩擦能托住，物块随带匀速上行；μ&lt;tanθ 时摩擦不足以平衡下滑分力，物块<b>减速→停→反向加速下滑</b>，摩擦力方向翻转（由沿带向上变为…仍向上，但已不足以抵消下滑）。<br>③ 划痕仍是相对位移最大绝对值；本默认题（θ=37°、v₀=12、v带=4、μ=0.25）共速于 t=1 s，划痕 4 m，物块随后滑回底端 A。<br>④ 倾斜带摩擦<b>永不为零</b>（除非 μ≥tanθ 且共速后静摩擦平衡）——与水平带“共速即 f=0”形成对比，这正是学生最易错处。' };
+  I:'<b>怎么读这张图（倾斜）</b><br>① 沿斜面方向，物块受重力分力 mg·sinθ（向下）与摩擦力；垂直斜面受支持力 N=mg·cosθ。<br>② <b>共速瞬间是判据转折点</b>：比较 μ 与 tanθ。μ≥tanθ 时静摩擦能托住，物块随带匀速上行；μ&lt;tanθ 时摩擦不足以平衡下滑分力，物块<b>减速→停→反向加速下滑</b>，摩擦力方向翻转（由沿带向上变为…仍向上，但已不足以抵消下滑）。<br>③ 划痕仍是相对位移最大绝对值；本默认题（θ=37°、v₀=12、v带=4、μ=0.25）共速于 t=1 s，划痕 4 m，物块随后滑回底端 A。共速后下滑阶段在带上新添的划痕用<b>红色</b>标出，沿带面法向与紫色划痕错开，便于区分两个阶段的相对滑动。<br>④ 倾斜带摩擦<b>永不为零</b>（除非 μ≥tanθ 且共速后静摩擦平衡）——与水平带“共速即 f=0”形成对比，这正是学生最易错处。' };
 
 /* 标签页切换 */
 var tabs=document.querySelectorAll('.tab');

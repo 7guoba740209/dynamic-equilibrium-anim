@@ -78,7 +78,7 @@
     </div>
   </div>
   <div class="side">
-    <div class="card"><svg id="vt" viewBox="0 0 420 290"></svg></div>
+    <div class="card"><svg id="vt" viewBox="0 0 420 300"></svg></div>
     <div class="panel">
       <div class="box"><div class="v" id="mV">0.0</div><div class="l">速度 v (m/s)</div></div>
       <div class="box"><div class="v" id="mA">0.0</div><div class="l">加速度 a (m/s²)</div></div>
@@ -175,7 +175,11 @@ function drawVT(m){
   var tMax=Math.max(S.tEnd,0.5);
   var i, vlo=0, vhi=Math.max(P.v0,P.vb,0), sv;
   for(i=0;i<=80;i++){ sv=m.state(S.tEnd*i/80).v; if(sv<vlo)vlo=sv; if(sv>vhi)vhi=sv; }
-  var vMin=Math.min(0,vlo)*1.12, vMax=Math.max(0,vhi,P.vb)*1.12+0.6;
+  // 选择正方向：以物块速度的主要方向为“正”，使图线主要落在 t 轴上方、更直观
+  var acc=0; for(i=0;i<=60;i++){ acc+=m.state(S.tEnd*i/60).v; }
+  var sgn = acc<0 ? -1 : 1; m.vsgn=sgn;
+  var fvlo=Math.min(0, sgn*vlo), fvhi=Math.max(0, sgn*vhi, sgn*P.vb);
+  var vMin=fvlo*1.12, vMax=fvhi*1.12+0.6;
   if(vMax-vMin<1.2) vMax=vMin+1.2;
   function tx(tt){ return x0+(tt/tMax)*(x1-x0); }
   function vy(vv){ return y1-((vv-vMin)/(vMax-vMin))*(y1-y0); }
@@ -183,7 +187,7 @@ function drawVT(m){
   s+='<line x1="'+x0+'" y1="'+y1+'" x2="'+x1+'" y2="'+y1+'" stroke="#888780" stroke-width="1"/>';
   s+='<text x="'+x1+'" y="'+(y0-8)+'" font-size="12" fill="#6B7280" text-anchor="end">t / s</text>';
   s+='<text x="14" y="'+(y0+4)+'" font-size="12" fill="#6B7280">v</text>';
-  var i, gv, gy;
+  var gv, gy;
   for(i=0;i<=4;i++){
     gv=vMin+(vMax-vMin)*i/4; gy=vy(gv);
     s+='<line x1="'+x0+'" y1="'+gy.toFixed(1)+'" x2="'+x1+'" y2="'+gy.toFixed(1)+'" stroke="#F3F4F6" stroke-width="1"/>';
@@ -192,27 +196,31 @@ function drawVT(m){
   if(vMin<-0.01) s+='<line x1="'+x0+'" y1="'+vy(0).toFixed(1)+'" x2="'+x1+'" y2="'+vy(0).toFixed(1)+'" stroke="#D1D5DB" stroke-width="1.5"/>';
   for(i=0;i<=4;i++){ var gt=tMax*i/4, gx=tx(gt); s+='<text x="'+gx.toFixed(1)+'" y="'+(y1+16)+'" font-size="11" fill="#9CA3AF" text-anchor="middle">'+gt.toFixed(1)+'</text>'; }
   var pts=[], N=160;
-  for(i=0;i<=N;i++){ var tt=S.tEnd*i/N, stt=m.state(tt); pts.push(tx(tt).toFixed(1)+','+vy(stt.v).toFixed(1)); }
+  for(i=0;i<=N;i++){ var tt=S.tEnd*i/N, stt=m.state(tt); pts.push(tx(tt).toFixed(1)+','+vy(sgn*stt.v).toFixed(1)); }
   s+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="#B5D4F4" stroke-width="2.5"/>';
   var pd=[], M=120, tE2=Math.min(t,S.tEnd);
-  for(i=0;i<=M;i++){ var tt2=tE2*i/M, st2=m.state(tt2); pd.push(tx(tt2).toFixed(1)+','+vy(st2.v).toFixed(1)); }
+  for(i=0;i<=M;i++){ var tt2=tE2*i/M, st2=m.state(tt2); pd.push(tx(tt2).toFixed(1)+','+vy(sgn*st2.v).toFixed(1)); }
   if(pd.length>1) s+='<polyline points="'+pd.join(' ')+'" fill="none" stroke="#185FA5" stroke-width="2.5"/>';
-  s+='<line x1="'+x0+'" y1="'+vy(P.vb).toFixed(1)+'" x2="'+x1+'" y2="'+vy(P.vb).toFixed(1)+'" stroke="#6B7280" stroke-width="1.5" stroke-dasharray="5 4"/>';
-  s+='<text x="'+(x1-4)+'" y="'+(vy(P.vb)-6).toFixed(1)+'" font-size="11" fill="#6B7280" text-anchor="end">带速</text>';
+  s+='<line x1="'+x0+'" y1="'+vy(sgn*P.vb).toFixed(1)+'" x2="'+x1+'" y2="'+vy(sgn*P.vb).toFixed(1)+'" stroke="#6B7280" stroke-width="1.5" stroke-dasharray="5 4"/>';
+  s+='<text x="'+(x1-4)+'" y="'+(vy(sgn*P.vb)-6).toFixed(1)+'" font-size="11" fill="#6B7280" text-anchor="end">带速</text>';
   var cur2=m.state(t);
-  s+='<circle cx="'+tx(t).toFixed(1)+'" cy="'+vy(cur2.v).toFixed(1)+'" r="5" fill="#185FA5"/>';
+  s+='<circle cx="'+tx(t).toFixed(1)+'" cy="'+vy(sgn*cur2.v).toFixed(1)+'" r="5" fill="#185FA5"/>';
   if(S.common){
     s+='<line x1="'+tx(S.t1).toFixed(1)+'" y1="'+y0+'" x2="'+tx(S.t1).toFixed(1)+'" y2="'+y1+'" stroke="#E24B4A" stroke-width="1" stroke-dasharray="3 3"/>';
-    s+='<circle cx="'+tx(S.t1).toFixed(1)+'" cy="'+vy(P.vb).toFixed(1)+'" r="4" fill="#E24B4A"/>';
-    s+='<text x="'+(tx(S.t1)+6).toFixed(1)+'" y="'+(vy(P.vb)-8).toFixed(1)+'" font-size="11" fill="#A32D2D">共速 '+S.t1.toFixed(2)+' s</text>';
+    s+='<circle cx="'+tx(S.t1).toFixed(1)+'" cy="'+vy(sgn*P.vb).toFixed(1)+'" r="4" fill="#E24B4A"/>';
+    s+='<text x="'+(tx(S.t1)+6).toFixed(1)+'" y="'+(vy(sgn*P.vb)-8).toFixed(1)+'" font-size="11" fill="#A32D2D">共速 '+S.t1.toFixed(2)+' s</text>';
   }
+  var dirTxt = (cur==='I') ? (sgn<0?'以沿斜面向下为正方向':'以沿斜面向上为正方向')
+                           : (sgn<0?'以向左为正方向':'以向右为正方向');
+  s+='<text x="'+((x0+x1)/2).toFixed(1)+'" y="288" font-size="12.5" fill="#374151" text-anchor="middle">物块的 v-t 图像，'+dirTxt+'</text>';
   document.getElementById('vt').innerHTML=s;
 }
 function drawNums(m){
   var st=m.state(t);
-  document.getElementById('mV').textContent=st.v.toFixed(2);
-  document.getElementById('mA').textContent=st.a.toFixed(2);
-  document.getElementById('mF').textContent=st.f.toFixed(2);
+  var sgn=m.vsgn||1;
+  document.getElementById('mV').textContent=(sgn*st.v).toFixed(2);
+  document.getElementById('mA').textContent=(sgn*st.a).toFixed(2);
+  document.getElementById('mF').textContent=(sgn*st.f).toFixed(2);
   document.getElementById('mX').textContent=st.X.toFixed(2);
   document.getElementById('mD').textContent=st.drel.toFixed(2);
   document.getElementById('mS').textContent=st.scr.toFixed(2);

@@ -257,19 +257,22 @@ function drawScratches(m, th, tt, sw){
     if(S.drel1 !== undefined && S.drel1 !== null) drel1 = S.drel1;
     else drel1 = S.X1 - S.X0 - P.vb*S.t1;
   }
-  var off = 7, s='';
-  // 紫色：共速前物块在带上蹭过的划痕，必须随动画「同步」增长——
-  // t<t1 用当前相对位移 drelNow（物块走到哪、划痕跟到哪）；共速后才固定为共速时刻全长 drel1。
-  // 之前误用 drel1 当范围，导致 t=0 物块刚放下、共速前物块还在半路时，划痕就超前铺满全程。
-  var drelPurple = (S.common && !S.vEqual && tt >= S.t1 - 1e-9) ? drel1 : drelNow;
-  var pA = S.X0 + Math.min(0, drelPurple), pB = S.X0 + Math.max(0, drelPurple);
-  if(Math.abs(pB-pA)*m.PXM > 1) s += beltPolyline(m, th, tt, pA, pB, 0, '#7F77DD', sw);
+  var off = 13, s='';
   // 红色：共速后物块仍在带上滑动（μ<tanθ 时立即减速并反向下滑），一旦相对位移偏离共速值就画红色，
   // 与共速前紫色划痕在共速点分界、并实时跟随物块，做到「一重叠马上红紫双色体现」。
+  // 注意：红色范围是紫色范围的子集（共速后紫色铺满全长 drel1，红色只是增量段），
+  // 因此红色「先画、压在紫色之下层」，并加大法向偏移使其整体露在紫色一侧，红线一出来即完整可见、不被紫色遮住。
   if(S.common && !S.vEqual && tt >= S.t1 - 1e-9 && Math.abs(drelNow - drel1) > 0.01){
     var rA = S.X0 + Math.min(drel1, drelNow), rB = S.X0 + Math.max(drel1, drelNow);
     if(Math.abs(rB-rA)*m.PXM > 1) s += beltPolyline(m, th, tt, rA, rB, off, '#DC2626', sw);
   }
+  // 紫色：共速前物块在带上蹭过的划痕，必须随动画「同步」增长——
+  // t<t1 用当前相对位移 drelNow（物块走到哪、划痕跟到哪）；共速后才固定为共速时刻全长 drel1。
+  // 之前误用 drel1 当范围，导致 t=0 物块刚放下、共速前物块还在半路时，划痕就超前铺满全程。
+  // 紫色后画、压在红色之上层，但因红色已沿法向偏移 13px 离开，紫色不会盖住红色露出的部分。
+  var drelPurple = (S.common && !S.vEqual && tt >= S.t1 - 1e-9) ? drel1 : drelNow;
+  var pA = S.X0 + Math.min(0, drelPurple), pB = S.X0 + Math.max(0, drelPurple);
+  if(Math.abs(pB-pA)*m.PXM > 1) s += beltPolyline(m, th, tt, pA, pB, 0, '#7F77DD', sw);
   return s;
 }
 

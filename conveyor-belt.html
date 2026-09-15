@@ -116,7 +116,7 @@
     <span class="dir" id="dV0">（轻放）</span>
   </div>
   <div class="row">
-    <span class="pl">传送带长度 L</span><input type="range" id="pL" min="4" max="14" step="0.5" value="8"><span class="pv" id="lL">8.0 m</span>
+    <span class="pl">传送带长度 L</span><input type="range" id="pL" min="4" max="14" step="0.1" value="8"><span class="pv" id="lL">8.00 m</span>
   </div>
   <div class="row" id="thetaRow">
     <span class="pl">倾角 θ</span><input type="range" id="pTH" min="10" max="45" step="1" value="37"><span class="pv" id="lTH">37°</span>
@@ -546,7 +546,7 @@ function syncControls(){
   document.getElementById('pMU').value=m.P.mu;
   document.getElementById('lMU').textContent=m.P.mu.toFixed(2);
   document.getElementById('pL').value=m.P.L;
-  document.getElementById('lL').textContent=m.P.L.toFixed(1)+' m';
+  document.getElementById('lL').textContent=m.P.L.toFixed(2)+' m';
   var thRow=document.getElementById('thetaRow'), dirRow=document.getElementById('dirRow');
   if(cur==='I'){ thRow.classList.remove('hidden'); document.getElementById('pTH').value=m.P.theta; document.getElementById('lTH').textContent=m.P.theta+'°'; dirRow.classList.remove('hidden'); document.getElementById('btnBfwd').className='dirbtn'+(convDir>0?' on':''); document.getElementById('btnBrev').className='dirbtn'+(convDir<0?' on':''); }
   else { thRow.classList.add('hidden'); dirRow.classList.add('hidden'); }
@@ -595,7 +595,7 @@ document.getElementById('btnBfwd').onclick=function(){ convDir=1; MI.P.vb=Math.a
 document.getElementById('btnBrev').onclick=function(){ convDir=-1; MI.P.vb=-Math.abs(MI.P.vb); document.getElementById('btnBfwd').className='dirbtn'; document.getElementById('btnBrev').className='dirbtn on'; document.getElementById('lVB').textContent=Math.abs(MI.P.vb).toFixed(1)+' m/s'; recalc(); };
 document.getElementById('pMU').oninput=function(){ curModel().P.mu=parseFloat(this.value); document.getElementById('lMU').textContent=curModel().P.mu.toFixed(2); recalc(); };
 document.getElementById('pTH').oninput=function(){ MI.P.theta=parseFloat(this.value); document.getElementById('lTH').textContent=MI.P.theta+'°'; recalc(); };
-document.getElementById('pL').oninput=function(){ var m=curModel(); m.P.L=parseFloat(this.value); document.getElementById('lL').textContent=m.P.L.toFixed(1)+' m'; m.init(); recalc(); };
+document.getElementById('pL').oninput=function(){ var m=curModel(); m.P.L=parseFloat(this.value); document.getElementById('lL').textContent=m.P.L.toFixed(2)+' m'; m.init(); recalc(); };
 
 function loop(now){
   if(!last) last=now;

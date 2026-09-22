@@ -1,0 +1,686 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>蜡块实验 · 合运动与分运动的关系</title>
+<style>
+  *{box-sizing:border-box}
+  :root{
+    --bg:#F2F6FA; --card:#FFFFFF; --line:#E3E9F0; --line2:#CBD6E3;
+    --tx:#16202C; --tx2:#5D6D80; --tx3:#8A98A8;
+    --red:#E11D48; --blue:#2563EB; --green:#16A34A; --amber:#D97706; --purple:#7E22CE;
+  }
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--tx);
+    font:14px/1.6 "Microsoft YaHei","PingFang SC","Hiragino Sans GB",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1500px;margin:0 auto;padding:14px 16px 34px}
+  .top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:12px}
+  h1{margin:0;font-size:21px;font-weight:700;letter-spacing:.3px}
+  .sub{margin:2px 0 0;color:var(--tx2);font-size:12.5px}
+  .actions{display:flex;gap:8px;flex-wrap:wrap}
+  button{
+    font-family:inherit;font-size:13px;cursor:pointer;color:var(--tx);
+    background:var(--card);border:1px solid var(--line2);border-radius:9px;
+    padding:7px 13px;transition:.16s;white-space:nowrap;
+  }
+  button:hover{border-color:#94A8BE;background:#F8FBFF}
+  button.pri{background:#16202C;border-color:#16202C;color:#fff;font-weight:600}
+  button.pri:hover{background:#28394C}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;align-items:center}
+  .bar .tag{font-size:12.5px;color:var(--tx3);margin-right:2px}
+  .bar button.on{background:#16202C;border-color:#16202C;color:#fff;font-weight:600}
+  .tog{background:#fff;font-size:12.5px;padding:6px 11px;border-radius:20px}
+  .tog.on{background:#E8F0FE;border-color:#93B4F5;color:#1D4ED8;font-weight:600}
+  .main{display:grid;grid-template-columns:minmax(0,1fr) 336px;gap:14px;align-items:start;margin-top:4px}
+  .stage{position:relative;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(20,40,70,.05)}
+  #cv{display:block;width:100%}
+  .legend{
+    position:absolute;left:12px;top:12px;display:flex;gap:11px;flex-wrap:wrap;max-width:calc(100% - 24px);
+    background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:9px;
+    padding:6px 11px;font-size:12.5px;color:var(--tx2);
+  }
+  .legend i{display:inline-block;width:15px;height:3.5px;border-radius:2px;margin-right:5px;vertical-align:middle}
+  .badge{background:rgba(22,32,44,.88);color:#fff;border-radius:8px;padding:3px 10px;font-size:12.5px;font-weight:600;
+    letter-spacing:.3px;margin-right:2px}
+  .hintline{margin-top:8px;color:var(--tx3);font-size:12.5px;background:#fff;border:1px solid var(--line);
+    border-radius:10px;padding:7px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .side{display:flex;flex-direction:column;gap:12px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 13px}
+  .card h2{margin:0 0 9px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
+  .card h2::before{content:"";width:3px;height:13px;background:#16202C;border-radius:2px}
+  .ctrl{margin-bottom:11px}
+  .ctrl:last-child{margin-bottom:0}
+  .ctrl .lab{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;color:var(--tx2);margin-bottom:3px}
+  .ctrl .val{font-weight:700;color:var(--tx);font-size:13.5px;font-variant-numeric:tabular-nums}
+  input[type=range]{width:100%;height:20px;accent-color:#16202C;cursor:pointer;margin:0}
+  .ro{display:flex;justify-content:space-between;padding:3.5px 0;font-size:13px;border-bottom:1px dashed #EEF2F7}
+  .ro:last-child{border-bottom:0}
+  .ro span{color:var(--tx2)}
+  .ro b{font-variant-numeric:tabular-nums;font-weight:700}
+  .bottom{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:14px;margin-top:14px;align-items:start}
+  .chartbox{background:#fff;border:1px solid var(--line);border-radius:14px;padding:6px;overflow:hidden}
+  #chart{display:block;width:100%}
+  .notes{font-size:13px}
+  .notes p{margin:0 0 8px}
+  .k{background:#F1F5FA;border-radius:4px;padding:0 4px;font-family:Consolas,Monaco,monospace;font-size:12.5px}
+  .prop{display:flex;gap:8px;font-size:13px;padding:4px 0;align-items:flex-start}
+  .prop .n{flex:0 0 20px;height:20px;border-radius:6px;background:#16202C;color:#fff;font-size:12px;
+    display:flex;align-items:center;justify-content:center;font-weight:700;margin-top:1px}
+  .ok{color:var(--green);font-weight:700}
+  .warn{color:var(--red);font-weight:700}
+  .em{color:var(--amber);font-weight:700}
+  .foot{margin-top:16px;color:var(--tx3);font-size:12px;text-align:center}
+  @media (max-width:1120px){ .main{grid-template-columns:minmax(0,1fr)} .bottom{grid-template-columns:minmax(0,1fr)} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>蜡块实验 · 合运动与分运动的关系</h1>
+      <p class="sub">红蜡块在玻璃管中匀速上浮 ＋ 玻璃管水平移动 ＝ 蜡块的实际运动（合运动）</p>
+    </div>
+    <div class="actions">
+      <button id="btnPlay" class="pri">开始</button>
+      <button id="btnReset">重置</button>
+      <button id="btnEnd">直达终点</button>
+      <button id="btnShot">导出图片</button>
+      <button id="btnFull">全屏</button>
+    </div>
+  </div>
+
+  <div class="bar" id="modes">
+    <span class="tag">水平分运动</span>
+    <button data-mode="A" class="on">匀速平移</button>
+    <button data-mode="B">匀加速平移</button>
+    <button data-mode="C">匀减速平移</button>
+    <span class="tag" style="margin-left:10px">显示</span>
+    <button class="tog on" data-tog="showTicks">等时标记</button>
+    <button class="tog on" data-tog="showVec">速度矢量</button>
+    <button class="tog on" data-tog="showGhost">分运动虚像</button>
+    <button class="tog on" data-tog="showGrid">网格标尺</button>
+  </div>
+
+  <div class="main">
+    <div>
+      <div class="stage" id="stage">
+        <canvas id="cv"></canvas>
+        <div class="legend">
+          <span><i style="background:#E11D48"></i>竖直分运动（上浮）</span>
+          <span><i style="background:#2563EB"></i>水平分运动（平移）</span>
+          <span><i style="background:#16A34A"></i>合运动（实际轨迹）</span>
+          <span><i style="background:#7E22CE"></i>等时标记&nbsp;<b id="tickInfo">每 0.5 s</b></span>
+        </div>
+      </div>
+      <div class="hintline">
+        <span class="badge" id="badge">匀速平移 · 合运动为匀速直线运动</span>
+        <span>空格 播放/暂停 ｜ 方向键 微调上浮速度 ｜ R 重置 ｜ 关键：看等时标记疏密——间距均匀＝匀速直线，越走越疏＝变速曲线</span>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="card">
+        <h2>参数调整</h2>
+        <div class="ctrl">
+          <div class="lab"><span>玻璃管长 L</span><span class="val"><b id="vL">60</b> cm</span></div>
+          <input type="range" id="sL" min="40" max="100" step="5" value="60">
+        </div>
+        <div class="ctrl">
+          <div class="lab"><span>蜡块上浮速度 v₁</span><span class="val"><b id="v1v">10.0</b> cm/s</span></div>
+          <input type="range" id="s1" min="2" max="20" step="0.5" value="10">
+        </div>
+        <div class="ctrl">
+          <div class="lab"><span>管水平速度 v₂</span><span class="val"><b id="v2v">15.0</b> cm/s</span></div>
+          <input type="range" id="s2" min="0" max="40" step="0.5" value="15">
+        </div>
+        <div class="ctrl">
+          <div class="lab"><span>水平加速度 a</span><span class="val"><b id="vav">0.0</b> cm/s²</span></div>
+          <input type="range" id="sa" min="-8" max="8" step="0.5" value="0">
+        </div>
+        <div class="ctrl">
+          <div class="lab"><span>时间倍率</span><span class="val"><b id="vr">2.0</b> ×</span></div>
+          <input type="range" id="sr" min="0.5" max="8" step="0.5" value="2">
+        </div>
+        <div class="ctrl">
+          <div class="lab"><span>矢量比例</span><span class="val"><b id="vv">1.2</b> ×</span></div>
+          <input type="range" id="sv" min="0.6" max="2" step="0.1" value="1.2">
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>实时数据</h2>
+        <div id="readout"></div>
+      </div>
+
+      <div class="card">
+        <h2>合运动性质</h2>
+        <div id="verdict"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <div class="chartbox"><canvas id="chart"></canvas></div>
+    <div class="card notes" id="notes"></div>
+  </div>
+
+  <p class="foot">高中物理 · 运动的合成与分解 ｜ 蜡块实验交互动画</p>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+var $ = function(s){return document.querySelector(s);};
+var clamp = function(v,a,b){return v<a?a:(v>b?b:v);};
+var nf = function(v,n){ n=(n===undefined?1:n); return isFinite(v)?v.toFixed(n):'∞'; };
+var FONT = '"Microsoft YaHei","PingFang SC","Hiragino Sans GB",system-ui,sans-serif';
+var fnt = function(w,s){ return w+' '+s+'px '+FONT; };
+
+/* ================= 物理 =================
+   单位：cm、cm/s、cm/s²
+   世界坐标：x 水平向右（管平移方向），y 竖直向上（蜡块上浮方向）
+   竖直分运动： y = v₁·t                —— 匀速直线
+   水平分运动： x = v₂·t + ½·a·t²       —— a=0 匀速 / a>0 匀加速 / a<0 匀减速
+   合运动位置 = (x, y)：即两个分运动按平行四边形定则合成的结果
+   全程时间 T = L / v₁（两分运动与合运动经历同一段时间 —— 等时性）
+   ======================================== */
+var WAXH_CM = 5, WAXW_CM = 7, TUBEW_CM = 9;   /* 蜡块与玻璃管的真实尺寸 */
+var YG = -WAXH_CM/2;                          /* 管底(=地面)对应的世界 y */
+
+var P = { L:60, v1:10, v2:15, a:0, rate:2, vec:1.2,
+          mode:'A', showTicks:true, showVec:true, showGhost:true, showGrid:true };
+var SIM = { t:0, running:false };
+
+function Ttot(){ return P.L/Math.max(P.v1,0.01); }
+function xAt(t){ return P.v2*t + 0.5*P.a*t*t; }
+function stateAt(t){
+  var vx = P.v2 + P.a*t;
+  return { t:t, x:xAt(t), y:P.v1*t, vx:vx, vy:P.v1, vr:Math.hypot(vx,P.v1) };
+}
+function tickDt(){ var T=Ttot(); return T>2.5 ? 0.5 : T/6; }
+
+/* ================= 画布 ================= */
+var cv=$('#cv'), ctx=cv.getContext('2d');
+var ch=$('#chart'), cx=ch.getContext('2d');
+var W=1100,H=560,CW=1100,CH=250,DPR=1;
+
+function fit(){
+  DPR = Math.min(2, window.devicePixelRatio||1);
+  var r = cv.parentElement.getBoundingClientRect();
+  W = Math.max(680, Math.round(r.width));
+  H = Math.round(clamp(W*0.50, 430, 600));
+  cv.width = Math.round(W*DPR); cv.height = Math.round(H*DPR);
+  cv.style.height = H+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+
+  var r2 = ch.parentElement.getBoundingClientRect();
+  CW = Math.max(600, Math.round(r2.width-12));
+  CH = Math.round(clamp(CW*0.215, 195, 265));
+  ch.width = Math.round(CW*DPR); ch.height = Math.round(CH*DPR);
+  ch.style.height = CH+'px';
+  cx.setTransform(DPR,0,0,DPR,0,0);
+}
+
+/* ========= 视图：x、y 共用同一比例尺 k（保证轨迹形状真实） ========= */
+var view = { k:6, xmin:0, xmax:0, padL:96, baseY:400 };
+function SX(x){ return view.padL + (x - view.xmin)*view.k; }
+function SY(y){ return view.baseY - (y - YG)*view.k; }
+
+function computeView(){
+  var T = Ttot(), xs=[0], i, t;
+  for(i=0;i<=160;i++){ t = T*i/160; xs.push(xAt(t)); }
+  var xmin = Math.min.apply(null,xs), xmax = Math.max.apply(null,xs);
+  var spanX = Math.max(xmax-xmin, 0.30*P.L);
+  var spanY = (P.L + WAXH_CM/2) - YG;
+  var padL=96, padR=56, padT=56, padB=104;
+  var k = Math.min((W-padL-padR)/spanX, (H-padT-padB)/spanY);
+  view.k=k; view.xmin=xmin; view.xmax=xmax;
+  view.padL=padL; view.baseY = H - padB;
+}
+
+/* ================= 绘图基元 ================= */
+function arrow(x1,y1,x2,y2,color,w,head){
+  w=w||2.4; head=head||11;
+  var a=Math.atan2(y2-y1,x2-x1);
+  var bx=x2-Math.cos(a)*head*0.85, by=y2-Math.sin(a)*head*0.85;
+  ctx.lineCap='round';
+  ctx.strokeStyle='rgba(255,255,255,.9)'; ctx.lineWidth=w+3.4;
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(bx,by); ctx.stroke();
+  ctx.strokeStyle=color; ctx.lineWidth=w;
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(bx,by); ctx.stroke();
+  ctx.save(); ctx.translate(x2,y2); ctx.rotate(a);
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-head,-head*0.44); ctx.lineTo(-head,head*0.44); ctx.closePath();
+  ctx.fillStyle=color; ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,.9)'; ctx.lineWidth=1.8; ctx.stroke();
+  ctx.restore();
+}
+function haloText(txt,x,y,color,size,align,weight){
+  size=size||13; align=align||'left'; weight=weight||600;
+  ctx.font=fnt(weight,size); ctx.textAlign=align; ctx.textBaseline='middle';
+  ctx.lineJoin='round'; ctx.lineWidth=4.2; ctx.strokeStyle='rgba(255,255,255,.92)';
+  ctx.strokeText(txt,x,y); ctx.fillStyle=color; ctx.fillText(txt,x,y);
+}
+function vText(base,sub,x,y,color,size){
+  size=size||15;
+  var F1=fnt(700,size), F2=fnt(700,Math.round(size*0.72));
+  ctx.textBaseline='alphabetic'; ctx.textAlign='left';
+  ctx.font=F1; var w1=ctx.measureText(base).width;
+  ctx.font=F2; var w2=ctx.measureText(sub).width;
+  var x0 = x-(w1+w2)/2;
+  ctx.font=F1; ctx.lineJoin='round'; ctx.lineWidth=4.2; ctx.strokeStyle='rgba(255,255,255,.92)';
+  ctx.strokeText(base,x0,y); ctx.fillStyle=color; ctx.fillText(base,x0,y);
+  ctx.font=F2; ctx.strokeText(sub,x0+w1+1,y+size*0.24); ctx.fillStyle=color; ctx.fillText(sub,x0+w1+1,y+size*0.24);
+}
+function rr(c,x,y,w,h,r){
+  c.beginPath();
+  c.moveTo(x+r,y); c.lineTo(x+w-r,y); c.quadraticCurveTo(x+w,y,x+w,y+r);
+  c.lineTo(x+w,y+h-r); c.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  c.lineTo(x+r,y+h); c.quadraticCurveTo(x,y+h,x,y+h-r);
+  c.lineTo(x,y+r); c.quadraticCurveTo(x,y,x+r,y); c.closePath();
+}
+function chip(txt,x,y,bg,fg,size){
+  size=size||12;
+  ctx.font=fnt(700,size); ctx.textAlign='center'; ctx.textBaseline='middle';
+  var w=ctx.measureText(txt).width+16, h=size+9;
+  rr(ctx,x-w/2,y-h/2,w,h,6); ctx.fillStyle=bg; ctx.fill();
+  ctx.fillStyle=fg; ctx.fillText(txt,x,y+.5);
+}
+function cchip(txt,x,y,bg,fg,size){
+  size=size||12;
+  cx.font=fnt(700,size); cx.textAlign='center'; cx.textBaseline='middle';
+  var w=cx.measureText(txt).width+13, h=size+9;
+  rr(cx,x-w/2,y-h/2,w,h,5); cx.fillStyle=bg; cx.fill();
+  cx.fillStyle=fg; cx.fillText(txt,x,y+.5);
+}
+
+/* ================= 蜡块 ================= */
+function drawWax(x,y,w,h,fill,stroke,dashed){
+  ctx.save();
+  if(dashed) ctx.setLineDash([5,4]);
+  rr(ctx,x-w/2,y-h/2,w,h,Math.min(5,h*0.3));
+  ctx.fillStyle=fill; ctx.fill();
+  ctx.strokeStyle=stroke; ctx.lineWidth=dashed?1.8:1.4; ctx.stroke();
+  ctx.restore();
+  if(!dashed){
+    ctx.save();
+    rr(ctx,x-w/2,y-h/2,w,h,Math.min(5,h*0.3)); ctx.clip();
+    ctx.beginPath(); ctx.ellipse(x-w*0.2,y-h*0.24,w*0.24,h*0.16,-0.5,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,.55)'; ctx.fill();
+    ctx.restore();
+  }
+}
+
+/* ================= 背景 ================= */
+function drawBackground(){
+  ctx.fillStyle='#FDFEFF'; ctx.fillRect(0,0,W,H);
+  var baseY=view.baseY;
+  /* 地面 */
+  ctx.fillStyle='#F7F4EC'; ctx.fillRect(0,baseY,W,H-baseY);
+  ctx.strokeStyle='#B9B3A2'; ctx.lineWidth=1.4;
+  ctx.beginPath(); ctx.moveTo(0,baseY+.5); ctx.lineTo(W,baseY+.5); ctx.stroke();
+
+  if(!P.showGrid) return;
+  var step = P.L<=60?10:20, m;
+  ctx.strokeStyle='#EEF3F9'; ctx.lineWidth=1;
+  for(m=step;m<=P.L+0.1;m+=step){
+    var gy=SY(m);
+    ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(W,gy); ctx.stroke();
+  }
+  for(m=Math.ceil(view.xmin/step)*step; m<=view.xmax; m+=step){
+    var gx=SX(m);
+    if(gx<46 || gx>W-8) continue;
+    ctx.beginPath(); ctx.moveTo(gx,SY(0)); ctx.lineTo(gx,SY(P.L)); ctx.stroke();
+  }
+  /* 左侧竖直标尺 */
+  var ax=34;
+  ctx.strokeStyle='#B4B2A9'; ctx.lineWidth=1.2;
+  ctx.beginPath(); ctx.moveTo(ax,SY(0)); ctx.lineTo(ax,SY(P.L)); ctx.stroke();
+  for(m=0;m<=P.L+0.1;m+=step){
+    var yy=SY(m);
+    ctx.beginPath(); ctx.moveTo(ax-4,yy); ctx.lineTo(ax+4,yy); ctx.stroke();
+  }
+  haloText('s₁ / cm', ax+8, Math.max(54,SY(P.L)-16), '#8A98A8', 12, 'left', 600);
+  haloText('0', ax-10, SY(0), '#8A98A8', 11.5, 'right', 400);
+  haloText(String(P.L), ax-10, SY(P.L), '#8A98A8', 11.5, 'right', 400);
+}
+
+/* ================= 玻璃管 ================= */
+function drawTube(tx){
+  var k=view.k;
+  var tw = Math.max(7, TUBEW_CM*k);
+  var x0 = SX(tx)-tw/2;
+  var yTop = SY(P.L + WAXH_CM/2), yBot = SY(YG);
+  var h = yBot-yTop;
+  ctx.save();
+  rr(ctx,x0,yTop,tw,h,Math.min(9,tw*0.34));
+  ctx.fillStyle='rgba(226,246,254,.72)'; ctx.fill();
+  ctx.strokeStyle='rgba(116,188,220,.95)'; ctx.lineWidth=2; ctx.stroke();
+  ctx.clip();
+  ctx.strokeStyle='rgba(96,178,232,.4)'; ctx.lineWidth=1.2;
+  for(var i=0;i<9;i++){
+    var yy = yTop + (i+0.5)*(h/9);
+    ctx.beginPath();
+    for(var xx=x0;xx<=x0+tw;xx+=4){
+      var o = Math.sin(xx*0.13 + wavePhase + i*0.9)*1.3;
+      if(xx===x0) ctx.moveTo(xx,yy+o); else ctx.lineTo(xx,yy+o);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+  ctx.strokeStyle='rgba(255,255,255,.85)'; ctx.lineWidth=2.4;
+  ctx.beginPath(); ctx.moveTo(x0+tw*0.26,yTop+9); ctx.lineTo(x0+tw*0.26,yBot-9); ctx.stroke();
+  ctx.strokeStyle='rgba(116,188,220,1)'; ctx.lineWidth=2.8;
+  ctx.beginPath(); ctx.moveTo(x0,yBot); ctx.lineTo(x0+tw,yBot); ctx.stroke();
+}
+
+/* ================= 主绘制 ================= */
+var wavePhase = 0;
+
+function draw(){
+  computeView();
+  drawBackground();
+  var T=Ttot(), k=view.k;
+  var tw = Math.max(7, TUBEW_CM*k);
+  var waxW = Math.max(5, WAXW_CM*k), waxH = Math.max(7, WAXH_CM*k);
+  var st = stateAt(SIM.t);
+
+  /* 起始位置（管初始所在竖直虚线） */
+  ctx.save(); ctx.setLineDash([5,6]); ctx.strokeStyle='rgba(140,155,172,.6)'; ctx.lineWidth=1.2;
+  ctx.beginPath(); ctx.moveTo(SX(0),SY(P.L+WAXH_CM/2)); ctx.lineTo(SX(0),SY(YG)); ctx.stroke();
+  ctx.restore();
+
+  /* 分运动虚像体系 */
+  var gy = view.baseY + 30;                 /* 水平分运动投影轴 */
+  var gx = 62;                              /* 竖直分运动投影轴 */
+  if(P.showGhost){
+    ctx.save(); ctx.setLineDash([4,5]); ctx.lineWidth=1.3;
+    ctx.strokeStyle='rgba(225,29,72,.5)';
+    ctx.beginPath(); ctx.moveTo(gx,SY(st.y)); ctx.lineTo(SX(st.x),SY(st.y)); ctx.stroke();
+    ctx.strokeStyle='rgba(37,99,235,.5)';
+    ctx.beginPath(); ctx.moveTo(SX(st.x),gy); ctx.lineTo(SX(st.x),SY(st.y)); ctx.stroke();
+    ctx.restore();
+    drawWax(gx,SY(st.y),waxW*0.8,waxH*0.8,'rgba(225,29,72,.10)','rgba(225,29,72,.9)',true);
+    drawWax(SX(st.x),gy,waxW*0.8,waxH*0.8,'rgba(37,99,235,.10)','rgba(37,99,235,.9)',true);
+    chip('竖直', gx, SY(st.y)+waxH*0.9+13, 'rgba(255,255,255,.94)', '#C4143F', 12);
+    chip('水平', clamp(SX(st.x)+38,42,W-42), gy, 'rgba(255,255,255,.94)', '#1D4ED8', 12);
+  }
+
+  /* 理论轨迹（虚） */
+  var n=140, i, t, s;
+  ctx.save(); ctx.setLineDash([7,6]); ctx.strokeStyle='rgba(22,163,74,.4)'; ctx.lineWidth=1.8;
+  ctx.beginPath();
+  for(i=0;i<=n;i++){ t=T*i/n; s=stateAt(t); if(i===0) ctx.moveTo(SX(s.x),SY(s.y)); else ctx.lineTo(SX(s.x),SY(s.y)); }
+  ctx.stroke(); ctx.restore();
+
+  /* 已走过的轨迹（合运动轨迹） */
+  if(SIM.t>1e-6){
+    ctx.save(); ctx.strokeStyle='rgba(22,163,74,.95)'; ctx.lineWidth=3; ctx.lineCap='round';
+    ctx.beginPath();
+    var m=Math.max(2,Math.round(n*SIM.t/T));
+    for(i=0;i<=m;i++){ t=T*i/m; s=stateAt(t); if(i===0) ctx.moveTo(SX(s.x),SY(s.y)); else ctx.lineTo(SX(s.x),SY(s.y)); }
+    ctx.stroke(); ctx.restore();
+  }
+
+  /* 等时间隔标记 */
+  if(P.showTicks){
+    var dt=tickDt();
+    for(t=0;t<=T+1e-9;t+=dt){
+      var tt=Math.min(t,T), ss=stateAt(tt);
+      ctx.beginPath(); ctx.arc(SX(ss.x),SY(ss.y),3.4,0,Math.PI*2);
+      ctx.fillStyle = (tt<=SIM.t+1e-9) ? '#7E22CE' : 'rgba(126,34,206,.26)';
+      ctx.fill(); ctx.strokeStyle='rgba(255,255,255,.92)'; ctx.lineWidth=1.4; ctx.stroke();
+    }
+  }
+
+  /* 玻璃管 + 蜡块 */
+  drawTube(st.x);
+  drawWax(SX(st.x),SY(st.y),waxW,waxH,'#E11D48','rgba(140,10,40,.75)',false);
+  /* 管内持续上浮提示（向上） */
+  ctx.save(); ctx.globalAlpha=.45;
+  arrow(SX(st.x), SY(st.y)+waxH*1.55, SX(st.x), SY(st.y)+waxH*0.75, '#E11D48',1.6,7);
+  ctx.restore();
+
+  /* 速度矢量：v₁、v₂、v合 共用同一比例 kvec */
+  if(P.showVec){
+    var kvec = 13*P.vec;
+    var ox=SX(st.x), oy=SY(st.y);
+    var v1=[ox, oy-P.v1*kvec];
+    var v2=[ox+st.vx*kvec, oy];
+    var vr=[ox+st.vx*kvec, oy-P.v1*kvec];
+    ctx.save(); ctx.setLineDash([4,4]); ctx.strokeStyle='rgba(120,138,158,.7)'; ctx.lineWidth=1.1;
+    ctx.beginPath(); ctx.moveTo(v1[0],v1[1]); ctx.lineTo(vr[0],vr[1]); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(v2[0],v2[1]); ctx.lineTo(vr[0],vr[1]); ctx.stroke();
+    ctx.restore();
+    arrow(ox,oy,v1[0],v1[1],'#E11D48',2.6);
+    if(Math.abs(st.vx)>0.02) arrow(ox,oy,v2[0],v2[1],'#2563EB',2.6);
+    arrow(ox,oy,vr[0],vr[1],'#16A34A',3);
+    vText('v','1', v1[0]-16, v1[1]-6, '#C4143F', 15);
+    if(Math.abs(st.vx)>0.02) vText('v','2', v2[0]+17, v2[1]+5, '#1D4ED8', 15);
+    vText('v','合', vr[0]+19, vr[1]-9, '#15803D', 15);
+  }
+
+  /* 位移标注 */
+  haloText('s₁ = '+nf(st.y,1)+' cm', gx+10, (SY(st.y)+SY(0))/2, '#C4143F', 12, 'left', 700);
+  if(Math.abs(st.x)>1){
+    var dy=view.baseY+62;
+    arrow(SX(0),dy,SX(st.x),dy,'#1D4ED8',1.8,9);
+    haloText('s₂ = '+nf(st.x,1)+' cm', (SX(0)+SX(st.x))/2, dy+17, '#1D4ED8', 12.5, 'center', 700);
+  }
+  haloText('s合 = '+nf(Math.hypot(st.x,st.y),1)+' cm', SX(st.x)+tw*0.62, SY(st.y)+16, '#15803D', 12.5, 'left', 700);
+}
+
+/* ================= 分析图：s-t ================= */
+function drawChart(){
+  var w=CW,h=CH;
+  cx.clearRect(0,0,w,h);
+
+  cx.fillStyle='#FFFFFF'; cx.fillRect(0,0,w,h);
+  var pad={l:64,r:22,t:44,b:34};
+  var T=Ttot(), i, t, v;
+  var vals=[0];
+  for(i=0;i<=120;i++){ t=T*i/120; vals.push(P.v1*t); vals.push(xAt(t)); vals.push(Math.hypot(xAt(t),P.v1*t)); }
+  var vmin=Math.min.apply(null,vals), vmax=Math.max.apply(null,vals);
+  var ymin=Math.min(0,vmin), ymax=Math.max(vmax,1)*1.06;
+  function X(t){ return pad.l + (t/T)*(w-pad.l-pad.r); }
+  function Y(s){ return pad.t + (ymax-s)/(ymax-ymin)*(h-pad.t-pad.b); }
+
+  cx.strokeStyle='#EEF2F7'; cx.lineWidth=1;
+  for(i=1;i<=4;i++){ var yy=pad.t+(h-pad.t-pad.b)*i/5; cx.beginPath(); cx.moveTo(pad.l,yy); cx.lineTo(w-pad.r,yy); cx.stroke(); }
+  for(i=1;i<=4;i++){ var xx=pad.l+(w-pad.l-pad.r)*i/5; cx.beginPath(); cx.moveTo(xx,pad.t); cx.lineTo(xx,h-pad.b); cx.stroke(); }
+  cx.strokeStyle='#CBD6E3'; cx.lineWidth=1.4;
+  cx.beginPath(); cx.moveTo(pad.l,pad.t); cx.lineTo(pad.l,h-pad.b); cx.lineTo(w-pad.r,h-pad.b); cx.stroke();
+  if(ymin<0){ cx.save(); cx.setLineDash([4,4]); cx.strokeStyle='#CBD6E3';
+    cx.beginPath(); cx.moveTo(pad.l,Y(0)); cx.lineTo(w-pad.r,Y(0)); cx.stroke(); cx.restore(); }
+
+  cx.beginPath();
+  for(i=0;i<=120;i++){ t=T*i/120; v=P.v1*t; if(i===0) cx.moveTo(X(t),Y(v)); else cx.lineTo(X(t),Y(v)); }
+  cx.strokeStyle='#E11D48'; cx.lineWidth=2.4; cx.stroke();
+
+  cx.beginPath();
+  for(i=0;i<=120;i++){ t=T*i/120; v=xAt(t); if(i===0) cx.moveTo(X(t),Y(v)); else cx.lineTo(X(t),Y(v)); }
+  cx.strokeStyle='#2563EB'; cx.lineWidth=2.4; cx.stroke();
+
+  cx.save(); cx.setLineDash([6,5]); cx.beginPath();
+  for(i=0;i<=120;i++){ t=T*i/120; v=Math.hypot(xAt(t),P.v1*t); if(i===0) cx.moveTo(X(t),Y(v)); else cx.lineTo(X(t),Y(v)); }
+  cx.strokeStyle='rgba(22,163,74,.9)'; cx.lineWidth=2; cx.stroke(); cx.restore();
+
+  var ct=clamp(SIM.t,0,T), ccx=X(ct);
+  cx.save(); cx.strokeStyle='rgba(22,32,44,.45)'; cx.lineWidth=1.4; cx.setLineDash([4,4]);
+  cx.beginPath(); cx.moveTo(ccx,pad.t-4); cx.lineTo(ccx,h-pad.b); cx.stroke(); cx.restore();
+  var pts=[['#E11D48',P.v1*ct],['#2563EB',xAt(ct)],['#16A34A',Math.hypot(xAt(ct),P.v1*ct)]];
+  for(i=0;i<3;i++){
+    cx.beginPath(); cx.arc(ccx,Y(pts[i][1]),5,0,Math.PI*2);
+    cx.fillStyle=pts[i][0]; cx.fill(); cx.strokeStyle='#fff'; cx.lineWidth=2; cx.stroke();
+  }
+
+  cx.fillStyle='#16202C'; cx.font=fnt(700,13); cx.textAlign='left'; cx.textBaseline='alphabetic';
+  cx.fillText('两个分运动的位移—时间图像（同一时刻读取 s₁、s₂ 再矢量合成）', pad.l, 16);
+  cx.font=fnt(600,12); cx.fillStyle='#5D6D80'; cx.textAlign='center';
+  cx.fillText('t / s', (pad.l+w-pad.r)/2, h-8);
+  cx.textAlign='right';
+  cx.fillText(nf(ymax,0), pad.l-8, pad.t+8);
+  cx.fillText(ymin<0?nf(ymin,0):'0', pad.l-8, h-pad.b+2);
+  cchip('s₁ 竖直', pad.l+42, pad.t-13, 'rgba(255,255,255,.95)', '#C4143F', 12);
+  cchip('s₂ 水平', pad.l+114, pad.t-13, 'rgba(255,255,255,.95)', '#1D4ED8', 12);
+  cchip('s合 合位移', pad.l+194, pad.t-13, 'rgba(255,255,255,.95)', '#15803D', 12);
+  cchip('t = '+nf(ct,1)+' s', clamp(ccx,84,w-72), pad.t-13, 'rgba(22,32,44,.9)', '#fff', 12);
+}
+
+/* ================= 仿真 ================= */
+function setPlayLabel(){ $('#btnPlay').textContent = SIM.running?'暂停':'开始'; }
+function resetSim(){ SIM.t=0; SIM.running=false; setPlayLabel(); }
+function step(dtReal){
+  var dt = dtReal*P.rate, T=Ttot();
+  SIM.t += dt;
+  if(SIM.t>=T){ SIM.t=T; SIM.running=false; setPlayLabel(); }
+}
+
+/* ================= 面板 ================= */
+function ro(l,v,c){ return '<div class="ro"><span>'+l+'</span><b'+(c?' style="color:'+c+'"':'')+'>'+v+'</b></div>'; }
+function updateReadout(){
+  var st=stateAt(SIM.t), T=Ttot();
+  var h='';
+  h+=ro('时间 t', nf(SIM.t,1)+' / '+nf(T,1)+' s');
+  h+=ro('竖直分位移 s₁', nf(st.y,1)+' cm');
+  h+=ro('水平分位移 s₂', nf(st.x,1)+' cm');
+  h+=ro('合位移 s合', nf(Math.hypot(st.x,st.y),1)+' cm');
+  h+=ro('v₁（上浮，恒定）', nf(P.v1,2)+' cm/s');
+  h+=ro('v₂（水平，此刻）', nf(st.vx,2)+' cm/s');
+  h+=ro('v合', nf(st.vr,2)+' cm/s');
+  h+=ro('v合 与水平夹角', nf(Math.atan2(P.v1,Math.abs(st.vx))/Math.PI*180,1)+' °');
+  $('#readout').innerHTML=h;
+  $('#tickInfo').textContent='每 '+nf(tickDt(),1)+' s';
+}
+function updateVerdict(){
+  var T=Ttot(), h='', uni=(Math.abs(P.a)<1e-6);
+  if(uni){
+    h+='<p style="margin:0 0 6px">竖直、水平两方向都是<b>匀速直线运动</b></p>';
+    h+='<p style="margin:0"><span class="ok">合运动 = 匀速直线运动</span><br>轨迹是一条<b>直线</b>，等时标记<b>间距均匀</b>。<br>'
+     + 'v合 = √(v₁²+v₂²) = <span class="k">'+nf(Math.hypot(P.v1,P.v2),2)+' cm/s</span>，'
+     + '与水平方向成 <span class="k">'+nf(Math.atan2(P.v1,P.v2)/Math.PI*180,1)+'°</span></p>';
+  }else{
+    h+='<p style="margin:0 0 6px">竖直方向<b>匀速</b>，水平方向<b>'+(P.a>0?'匀加速':'匀减速')+'</b></p>';
+    h+='<p style="margin:0"><span class="warn">合运动 = 匀变速曲线运动</span><br>轨迹是<b>抛物线</b>，等时标记<b>先密后疏</b>。<br>'
+     + '合加速度 a合 = <span class="k">'+nf(P.a,1)+' cm/s²</span>（沿水平方向）<br>'
+     + '速度方向不断改变，轨迹上某点的切线方向就是该时刻 v合 的方向</p>';
+  }
+  $('#verdict').innerHTML=h;
+}
+function updateNotes(){
+  var T=Ttot(), e=stateAt(T);
+  var h='';
+  h+='<p style="margin:0 0 6px"><b>合运动与分运动的四条关系</b></p>';
+  h+='<div class="prop"><span class="n">1</span><span><b>等时性</b>：分运动与合运动同时开始、同时结束，经历的时间相同。全程 t = '+nf(T,1)+' s，两个方向用的都是这段时间。</span></div>';
+  h+='<div class="prop"><span class="n">2</span><span><b>独立性</b>：一个方向的运动不影响另一个方向。水平推着玻璃管走，并不改变蜡块在管中上浮的速度 v₁ = '+nf(P.v1,1)+' cm/s。</span></div>';
+  h+='<div class="prop"><span class="n">3</span><span><b>等效性</b>：合运动与两个分运动的总效果相同。蜡块的真实位置，就等于"只上浮的虚像"与"只平移的虚像"按矢量合成出来的结果。</span></div>';
+  h+='<div class="prop"><span class="n">4</span><span><b>矢量性</b>：位移、速度、加速度都按平行四边形定则合成。s合 = √(s₁²+s₂²)、v合 = √(v₁²+v₂²) 只在两个方向垂直时成立。</span></div>';
+  h+='<p style="margin:8px 0 0;color:#5D6D80">当前：s₁ = '+nf(e.y,1)+' cm，s₂ = '+nf(e.x,1)+' cm → s合 = '+nf(Math.hypot(e.x,e.y),1)+' cm</p>';
+  $('#notes').innerHTML=h;
+}
+function updateBadge(){
+  var m={A:'匀速平移 · 合运动为匀速直线运动', B:'匀加速平移 · 合运动为匀变速曲线', C:'匀减速平移 · 合运动为匀变速曲线'};
+  $('#badge').textContent = m[P.mode] || '自由参数 · 请观察轨迹形状';
+}
+
+/* ================= 主循环 ================= */
+var last=0, uiAcc=1;
+function loop(ts){
+  if(!last) last=ts;
+  var dt=Math.min(0.06,Math.max(0,(ts-last)/1000)); last=ts;
+  if(SIM.running) step(dt);
+  wavePhase += dt*1.6;
+  draw();
+  uiAcc += dt;
+  if(uiAcc>0.1){ uiAcc=0; updateReadout(); drawChart(); }
+  requestAnimationFrame(loop);
+}
+
+/* ================= 交互 ================= */
+function syncUI(){
+  $('#sL').value=P.L; $('#vL').textContent=P.L;
+  $('#s1').value=P.v1; $('#v1v').textContent=nf(P.v1,1);
+  $('#s2').value=P.v2; $('#v2v').textContent=nf(P.v2,1);
+  $('#sa').value=P.a; $('#vav').textContent=nf(P.a,1);
+}
+function markMode(){
+  var mb=$('#modes');
+  Array.prototype.forEach.call(mb.querySelectorAll('[data-mode]'),function(o){
+    o.classList.toggle('on', o.dataset.mode===P.mode);
+  });
+}
+function bind(){
+  $('#btnPlay').onclick=function(){
+    if(SIM.t>=Ttot()-1e-9) resetSim();
+    SIM.running=!SIM.running; setPlayLabel();
+  };
+  $('#btnReset').onclick=function(){ resetSim(); };
+  $('#btnEnd').onclick=function(){ SIM.t=Ttot(); SIM.running=false; setPlayLabel(); };
+  $('#btnShot').onclick=function(){
+    var a=document.createElement('a');
+    a.download='蜡块实验_'+P.mode+'_v1-'+nf(P.v1,1)+'_v2-'+nf(P.v2,1)+'_a-'+nf(P.a,1)+'.png';
+    a.href=cv.toDataURL('image/png'); a.click();
+  };
+  $('#btnFull').onclick=function(){
+    var el=document.querySelector('.wrap');
+    if(!document.fullscreenElement){ (el.requestFullscreen||el.webkitRequestFullscreen).call(el); }
+    else document.exitFullscreen();
+  };
+
+  $('#modes').addEventListener('click',function(e){
+    var b=e.target.closest('button'); if(!b) return;
+    if(b.dataset.mode){
+      P.mode=b.dataset.mode;
+      if(P.mode==='A') P.a=0;
+      if(P.mode==='B') P.a=4;
+      if(P.mode==='C') P.a=-3;
+      syncUI(); markMode(); resetSim(); updateBadge(); updateVerdict(); updateNotes();
+    }else if(b.dataset.tog){
+      P[b.dataset.tog]=!P[b.dataset.tog];
+      b.classList.toggle('on',P[b.dataset.tog]);
+    }
+  });
+
+  function bindRange(id,valId,key,fix,after){
+    $(id).addEventListener('input',function(){
+      P[key]=parseFloat(this.value);
+      $(valId).textContent=fix(P[key]);
+      if(after) after();
+    });
+  }
+  var base=function(){ resetSim(); updateVerdict(); updateNotes(); };
+  bindRange('#sL','#vL','L',function(v){return v;},base);
+  bindRange('#s1','#v1v','v1',function(v){return nf(v,1);},base);
+  bindRange('#s2','#v2v','v2',function(v){return nf(v,1);},base);
+  bindRange('#sa','#vav','a',function(v){return nf(v,1);},function(){
+    P.mode = Math.abs(P.a)<1e-6 ? 'A' : 'free';
+    markMode(); updateBadge(); base();
+  });
+  bindRange('#sr','#vr','rate',function(v){return nf(v,1);});
+  bindRange('#sv','#vv','vec',function(v){return nf(v,1);});
+
+  window.addEventListener('keydown',function(e){
+    if(e.key===' '){ e.preventDefault(); $('#btnPlay').click(); }
+    if(e.key==='r'||e.key==='R') resetSim();
+    if(e.key==='ArrowLeft'||e.key==='ArrowRight'){
+      P.v1 = clamp(Math.round((P.v1+(e.key==='ArrowRight'?0.5:-0.5))*2)/2, 2, 20);
+      syncUI(); base();
+    }
+  });
+  window.addEventListener('resize',function(){ fit(); });
+}
+
+/* ================= 启动 ================= */
+function boot(){
+  fit(); bind(); syncUI(); markMode(); updateBadge(); resetSim(); updateVerdict(); updateNotes();
+  requestAnimationFrame(loop);
+}
+boot();
+})();
+</script>
+</body>
+</html>

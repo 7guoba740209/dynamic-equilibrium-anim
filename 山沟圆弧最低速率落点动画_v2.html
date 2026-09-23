@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>典例7 · 山沟圆弧最低速率落点 · 交互动画（v₀=√(gR/2)，答案A、D）</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #f4f6f8; color: #263238; padding: 18px 22px; }
+  h1 { font-size: 21px; margin-bottom: 4px; color: #1a237e; }
+  .sub { font-size: 13px; color: #607d8b; margin-bottom: 14px; }
+  .wrap { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+  .stage { background: #fff; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,.08); padding: 12px; }
+  canvas#scene { display: block; border-radius: 8px; background: #eaf6ff; }
+  .controls { display: flex; align-items: center; gap: 14px; margin-top: 12px; flex-wrap: wrap; }
+  .controls label { font-size: 14px; font-weight: bold; }
+  input[type=range] { width: 260px; accent-color: #1a237e; }
+  button { padding: 7px 16px; border: none; border-radius: 8px; background: #1a237e; color: #fff; font-size: 14px; cursor: pointer; }
+  button:hover { background: #303f9f; }
+  button.gold { background: #e65100; }
+  button.ghostbtn { background: #78909c; }
+  .panel { width: 400px; display: flex; flex-direction: column; gap: 12px; }
+  .card { background: #fff; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,.08); padding: 14px 16px; }
+  .card h2 { font-size: 15px; color: #1a237e; margin-bottom: 8px; border-left: 4px solid #1a237e; padding-left: 8px; }
+  .row { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; border-bottom: 1px dashed #eceff1; }
+  .row b { font-variant-numeric: tabular-nums; }
+  .formula { font-size: 13.5px; line-height: 1.9; }
+  .formula .hl { background: #fff8e1; border-radius: 4px; padding: 1px 5px; }
+  .ans { font-size: 16px; font-weight: bold; color: #b71c1c; background: #ffebee; border-radius: 8px; padding: 8px 12px; margin-top: 8px; }
+  details { font-size: 13.5px; line-height: 1.9; color: #37474f; }
+  details summary { cursor: pointer; font-weight: bold; color: #1a237e; font-size: 14px; }
+  details p { margin: 6px 0; }
+</style>
+</head>
+<body>
+<h1>典例7（2026·湖北卷）山沟圆弧 · 最低速率落点（修正版）</h1>
+<div class="sub">v₀ = √(gR/2)：初速度太小，<b>够不到弧顶 M</b>。拖动滑块改变抛射角 θ，观察落点深度 d 与落地速率 v；让速率最小的最优角不是 45°，而是 30°。</div>
+
+<div class="wrap">
+  <div class="stage">
+    <canvas id="scene" width="980" height="600"></canvas>
+    <div class="controls">
+      <label>抛射角 θ = <span id="thVal" style="color:#e65100">30°</span></label>
+      <input type="range" id="thSlider" min="-30" max="85" step="1" value="30">
+      <button id="throwBtn">投掷 (空格)</button>
+      <button id="bestBtn" class="gold">30° 最优角</button>
+      <button id="clearBtn" class="ghostbtn">清除痕迹</button>
+      <label style="font-weight:normal"><input type="checkbox" id="autoChk"> 自动连投</label>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="card">
+      <h2>实时数据</h2>
+      <div class="row"><span>飞行时间 t</span><b id="d-t">—</b></div>
+      <div class="row"><span>落点深度 d（相对 O）</span><b id="d-d">—</b></div>
+      <div class="row"><span>落地速率 v = √(v₀²+2gd)</span><b id="d-v">—</b></div>
+      <div class="row"><span>状态</span><b id="d-st">待投掷</b></div>
+    </div>
+
+    <div class="card">
+      <h2>落地速率 v 随抛射角 θ 的变化</h2>
+      <canvas id="chart" width="368" height="235"></canvas>
+    </div>
+
+    <div class="card">
+      <h2>物理量关系链（v₀² = gR/2）</h2>
+      <div class="formula">
+        ① 落点 P(R cosφ, −R sinφ)，深度 d = R sinφ<br>
+        ② 可达条件 sinφ ≥ 1 − v₀²/(gR)，故最高点 sinφ* = 1 − v₀²/(gR)<br>
+        ③ v_min² = 2gR − v₀² = 3gR/2 ⟹ <span class="hl">v_min = √(6gR)/2（D 对）</span><br>
+        ④ φ* = 30° → tanθ* = 1/√3 → <span class="hl">θ* = 30°（≠45°，B 错）</span><br>
+        ⑤ t* = <span class="hl">√(2R/g)（A 对）</span>；高度差 d* = R/2 ≠ √2R/2（C 错）
+        <div class="ans">答案：A、D</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <details>
+        <summary>展开完整解答</summary>
+        <p><b>第一步（可达区域）。</b> 设落点 P 在圆弧上、与 O 的连线与水平夹角 φ（向下为正），则 P(R cosφ, −R sinφ)，深度 d = R sinφ。把 P 代入轨迹方程 y = x tanθ − g x²/(2v₀²cos²θ)，可得存在抛射角 θ 使轨迹过 P 的充要条件为 sinφ ≥ 1 − v₀²/(gR)。</p>
+        <p><b>第二步（最小速率对应最高点）。</b> 由机械能守恒 v² = v₀² + 2gd = v₀² + 2gR sinφ，v 随 φ（即 d）单调增大；欲 v 最小，须取可达的<b>最小 φ</b>，即 sinφ* = 1 − v₀²/(gR)。</p>
+        <p><b>第三步（代入题给 v₀² = gR/2）。</b> sinφ* = 1 − 1/2 = 1/2 ⟹ φ* = 30°，落点深度 d* = R/2。最优抛射角由边界处的双根（轨迹恰与可达边界相切）给出 tanθ* = v₀²/(gR cosφ*) = (gR/2)/(gR·√3/2) = 1/√3，故 θ* = 30°，<b>并非 45°</b>——这正是 B 错的原因。</p>
+        <p><b>第四步（求最小速率与时间）。</b> v_min² = v₀² + 2gR sinφ* = v₀² + 2gR(1 − v₀²/(gR)) = 2gR − v₀² = 3gR/2，v_min = √(3gR/2) = √(6gR)/2，D 对。最优轨迹的水平位移 x = R cos30° = v₀cosθ*·t，代入 v₀、θ* 得 t = √(2R/g)（该结果与 v₀ 无关），A 对。O 与落点高度差为 d* = R/2，C 错。</p>
+        <p style="color:#78909c">注：若题给 v₀² ≥ gR（如 v₀ = √(gR)），则弧顶 M 可达，最优角才为 45°、v_min = v₀。本题 v₀ 较小，M 不可达，故答案 A、D。</p>
+      </details>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+/* ---------- 物理量：仿真单位制 g=1, R=1, v0=√(gR/2)=1/√2 ---------- */
+const R=1, G=1, V0=Math.SQRT1_2;   // v0² = 0.5 = gR/2
+
+const cv = document.getElementById('scene'), ctx = cv.getContext('2d');
+const OX=300, OY=130, S=225, W=cv.width, H=cv.height;
+const w2s = (x,y)=>[OX+x*S, OY-y*S];
+function simulate(thetaDeg, dt){
+  dt = dt || 0.0008;
+  const th = thetaDeg*Math.PI/180;
+  const ct = Math.cos(th), st = Math.sin(th);
+  let t=0, x=0, y=0, px=0, py=0;
+  while(t < 9){
+    px=x; py=y;
+    x = V0*ct*t; y = V0*st*t - 0.5*G*t*t;
+    if(x*x+y*y >= R*R){
+      const a = px*px+py*py, b = x*x+y*y;
+      const f = (R*R-a)/(b-a);
+      const lx = px+(x-px)*f, ly = py+(y-py)*f;
+      const d = -ly;
+      return { t: t-(1-f)*dt, x:lx, y:ly, d: d, v: Math.sqrt(V0*V0+2*G*d),
+               vx: V0*ct, vy: V0*st - G*t };
+    }
+    t += dt;
+  }
+  return null;
+}
+
+/* ---------- 图表数据 ---------- */
+const chartData = [];
+let minVV = 1e9, minTh = 30;
+for(let a=-30; a<=85; a++){
+  const r = simulate(a, 0.002);
+  if(r){ chartData.push({th:a, vv:r.v, t:r.t, d:r.d}); if(r.v<minVV){minVV=r.v; minTh=a;} }
+}
+
+/* ---------- 状态 ---------- */
+let state='idle', tSim=0, curTh=30, trail=[], ghosts=[], dots=[], ripple=null, lastLand=null, landTime=0;
+const SIMSPEED=0.6;
+const slider=document.getElementById('thSlider'), thVal=document.getElementById('thVal');
+const autoChk=document.getElementById('autoChk');
+
+function launch(){
+  curTh = +slider.value;
+  const res = simulate(curTh);
+  if(!res) return;
+  state='flying'; tSim=0; trail=[]; lastLand=null;
+  document.getElementById('d-st').textContent = '飞行中…';
+  document.getElementById('d-st').style.color = '#1a237e';
+}
+document.getElementById('throwBtn').onclick = launch;
+document.getElementById('bestBtn').onclick = ()=>{ slider.value=30; thVal.textContent='30°'; launch(); };
+document.getElementById('clearBtn').onclick = ()=>{ ghosts=[]; dots=[]; };
+slider.oninput = ()=>{ thVal.textContent = slider.value+'°'; if(state==='landed') launch(); };
+addEventListener('keydown', e=>{ if(e.code==='Space'){ e.preventDefault(); launch(); } });
+
+/* ---------- 绘制工具 ---------- */
+function arrow(x1,y1,x2,y2,color,width,head){
+  const dx=x2-x1, dy=y2-y1, L=Math.hypot(dx,dy); if(L<2) return;
+  const hx=x2-dx/L*head, hy=y2-dy/L*head;
+  ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=width; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(hx,hy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x2,y2);
+  ctx.lineTo(hx - dy/L*head*0.5, hy + dx/L*head*0.5);
+  ctx.lineTo(hx + dy/L*head*0.5, hy - dx/L*head*0.5);
+  ctx.closePath(); ctx.fill();
+}
+function label(txt,x,y,font,color,align){
+  ctx.font=font||'14px sans-serif'; ctx.textAlign=align||'left'; ctx.textBaseline='middle';
+  ctx.lineWidth=3.5; ctx.strokeStyle='rgba(255,255,255,.9)'; ctx.strokeText(txt,x,y);
+  ctx.fillStyle=color||'#263238'; ctx.fillText(txt,x,y);
+}
+const hatch = (function(){
+  const p=document.createElement('canvas'); p.width=p.height=8;
+  const c=p.getContext('2d'); c.strokeStyle='rgba(0,0,0,.28)'; c.lineWidth=1.3;
+  c.beginPath(); c.moveTo(-2,10); c.lineTo(10,-2); c.stroke();
+  return ctx.createPattern(p,'repeat');
+})();
+
+/* ---------- 场景 ---------- */
+function drawScene(){
+  const sky=ctx.createLinearGradient(0,0,0,H); sky.addColorStop(0,'#dbeeff'); sky.addColorStop(1,'#f6fbff');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
+  const [mx,my]=w2s(R,0), [bx,by]=w2s(0,-R);
+  ctx.fillStyle='#7a6653';
+  ctx.fillRect(0,OY,OX,H-OY);
+  ctx.beginPath(); ctx.moveTo(mx,my); ctx.lineTo(W,my); ctx.lineTo(W,H); ctx.lineTo(OX,H); ctx.lineTo(bx,by);
+  ctx.arc(OX,OY,S,Math.PI/2,0,true); ctx.closePath(); ctx.fill();
+  ctx.fillStyle=hatch;
+  ctx.fillRect(0,OY,OX,H-OY);
+  ctx.beginPath(); ctx.moveTo(mx,my); ctx.lineTo(W,my); ctx.lineTo(W,H); ctx.lineTo(OX,H); ctx.lineTo(bx,by);
+  ctx.arc(OX,OY,S,Math.PI/2,0,true); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#66bb6a'; ctx.fillRect(0,OY-7,OX,7);
+  // 等高虚线 O→M → 右侧（弧顶 M 在此线上，但够不到）
+  ctx.setLineDash([7,6]); ctx.strokeStyle='#90a4ae'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(OX,OY); ctx.lineTo(W-30,my); ctx.stroke(); ctx.setLineDash([]);
+  // 圆弧墙
+  ctx.strokeStyle='#d84315'; ctx.lineWidth=5; ctx.lineCap='round';
+  ctx.beginPath(); ctx.arc(OX,OY,S,0,Math.PI/2); ctx.stroke();
+  ctx.strokeStyle='#4e342e'; ctx.lineWidth=4;
+  ctx.beginPath(); ctx.moveTo(OX,OY); ctx.lineTo(bx,by); ctx.stroke();
+  const rlx=OX-14, rmidy=(OY+by)/2;
+  ctx.strokeStyle='#4e342e'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(rlx-5,rmidy-9); ctx.lineTo(rlx+5,rmidy-9);
+  ctx.moveTo(rlx-5,rmidy+9); ctx.lineTo(rlx+5,rmidy+9);
+  ctx.moveTo(rlx,rmidy-9); ctx.lineTo(rlx,rmidy+9); ctx.stroke();
+  label('R',rlx-8,rmidy,'bold 17px sans-serif','#4e342e','right');
+  // M 点（弧顶，v0 太小时不可达 → 画空心警示）
+  ctx.fillStyle='rgba(255,179,0,.25)'; ctx.beginPath(); ctx.arc(mx,my,6,0,7); ctx.fill();
+  ctx.strokeStyle='#e65100'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(mx,my,6,0,7); ctx.stroke();
+  label('M（弧顶，v₀太小够不到）',mx+10,my-14,'bold 13px sans-serif','#e65100');
+  // O 点
+  ctx.fillStyle='#1a237e'; ctx.beginPath(); ctx.arc(OX,OY,6,0,7); ctx.fill();
+  label('O（投掷点）',OX-10,OY-16,'bold 15px sans-serif','#1a237e','right');
+  // 救援队员
+  const px0=OX-56, py0=OY-7;
+  ctx.strokeStyle='#37474f'; ctx.lineWidth=2.5; ctx.lineCap='round';
+  ctx.beginPath(); ctx.arc(px0,py0-26,6,0,7); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(px0,py0-20); ctx.lineTo(px0,py0-8);
+  ctx.moveTo(px0,py0-8); ctx.lineTo(px0-6,py0); ctx.moveTo(px0,py0-8); ctx.lineTo(px0+6,py0);
+  ctx.moveTo(px0,py0-17); ctx.lineTo(px0+9,py0-22); ctx.stroke();
+  // 底部说明
+  label('仿真单位：v₀ = √(gR/2)，g = R = 1（时间单位 √(R/g)）　|　目标：落到圆弧上的速率最小',W/2,H-16,'13px sans-serif','#546e7a','center');
+}
+
+/* ---------- 图表 ---------- */
+const ch=document.getElementById('chart'), cctx=ch.getContext('2d');
+function drawChart(curTheta, curVV){
+  cctx.clearRect(0,0,ch.width,ch.height);
+  const L=44, Rp=12, T=12, B=32, cw=ch.width-L-Rp, chh=ch.height-T-B;
+  const x2p=th=>L+(th-(-30))/(85-(-30))*cw;
+  const ylo=0.4, yhi=1.7;
+  const y2p=v=>T+chh-(v-ylo)/(yhi-ylo)*chh;
+  cctx.strokeStyle='#eceff1'; cctx.lineWidth=1;
+  for(const g of [0.6,0.9,1.2,1.5]){ cctx.beginPath(); cctx.moveTo(L,y2p(g)); cctx.lineTo(ch.width-Rp,y2p(g)); cctx.stroke();
+    cctx.fillStyle='#90a4ae'; cctx.font='11px sans-serif'; cctx.textAlign='right'; cctx.fillText(g.toFixed(1),L-5,y2p(g)+4); }
+  for(const a of [-30,0,30,85]){ cctx.beginPath(); cctx.moveTo(x2p(a),T); cctx.lineTo(x2p(a),T+chh); cctx.stroke();
+    cctx.fillStyle='#90a4ae'; cctx.textAlign='center'; cctx.fillText(a+'°',x2p(a),ch.height-16); }
+  // v0 基准线（发射速率，低于曲线 → 即使最小落地速率也 > v0）
+  cctx.strokeStyle='#1565c0'; cctx.setLineDash([5,4]); cctx.lineWidth=1.5;
+  cctx.beginPath(); cctx.moveTo(L,y2p(V0)); cctx.lineTo(ch.width-Rp,y2p(V0)); cctx.stroke(); cctx.setLineDash([]);
+  cctx.fillStyle='#1565c0'; cctx.textAlign='left'; cctx.fillText('v₀',L+4,y2p(V0)-6);
+  // 曲线
+  cctx.strokeStyle='#d84315'; cctx.lineWidth=2.5; cctx.beginPath();
+  chartData.forEach((p,i)=>{ const X=x2p(p.th), Y=y2p(Math.min(p.vv,yhi)); i?cctx.lineTo(X,Y):cctx.moveTo(X,Y); });
+  cctx.stroke();
+  // 最小点
+  const mX=x2p(minTh), mY=y2p(minVV);
+  cctx.fillStyle='#ffb300'; cctx.beginPath(); cctx.arc(mX,mY,6,0,7); cctx.fill();
+  cctx.strokeStyle='#e65100'; cctx.lineWidth=2; cctx.stroke();
+  cctx.fillStyle='#e65100'; cctx.font='bold 12px sans-serif'; cctx.textAlign='center';
+  cctx.fillText('30°: vmin=√(6gR)/2', mX, mY+18);
+  if(curVV!=null){
+    cctx.fillStyle='#1a237e'; cctx.beginPath(); cctx.arc(x2p(curTheta),y2p(Math.min(curVV,yhi)),5,0,7); cctx.fill();
+  }
+  cctx.fillStyle='#546e7a'; cctx.font='12px sans-serif'; cctx.textAlign='left';
+  cctx.fillText('落地速率 v', 6, T+8);
+}
+drawChart(+slider.value, null);
+
+/* ---------- 主循环 ---------- */
+let lastTs=null;
+function frame(ts){
+  requestAnimationFrame(frame);
+  if(lastTs==null){ lastTs=ts; return; }
+  const dtReal=Math.min((ts-lastTs)/1000,0.05); lastTs=ts;
+  if(state==='flying'){
+    tSim += dtReal*SIMSPEED;
+    const th=curTh*Math.PI/180;
+    const x=V0*Math.cos(th)*tSim, y=V0*Math.sin(th)*tSim-0.5*G*tSim*tSim;
+    trail.push([x,y]);
+    const vNow=Math.hypot(V0*Math.cos(th), V0*Math.sin(th)-G*tSim);
+    document.getElementById('d-t').textContent = tSim.toFixed(3)+' √(R/g)';
+    document.getElementById('d-v').textContent = vNow.toFixed(3);
+    document.getElementById('d-d').textContent = '—';
+    if(x*x+y*y>=R*R){ const res=simulate(curTh); land(res); }
+  }
+  if(state==='landed' && autoChk.checked && ts-landTime>1100) launch();
+  if(ripple){ ripple.r+=dtReal*90; ripple.a-=dtReal*2.2; if(ripple.a<=0) ripple=null; }
+  drawScene();
+  ctx.lineWidth=1.5;
+  ghosts.forEach(g=>{ ctx.strokeStyle='rgba(120,144,156,.4)'; ctx.beginPath();
+    g.forEach((p,i)=>{ const [sx,sy]=w2s(p[0],p[1]); i?ctx.lineTo(sx,sy):ctx.moveTo(sx,sy); }); ctx.stroke(); });
+  if(trail.length>1){
+    ctx.strokeStyle='#1565c0'; ctx.lineWidth=2.4; ctx.beginPath();
+    trail.forEach((p,i)=>{ const [sx,sy]=w2s(p[0],p[1]); i?ctx.lineTo(sx,sy):ctx.moveTo(sx,sy); }); ctx.stroke();
+  }
+  dots.forEach(dt2=>{ ctx.fillStyle=dt2.col; ctx.beginPath(); ctx.arc(dt2.x,dt2.y,4.5,0,7); ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,.35)'; ctx.lineWidth=1; ctx.stroke(); });
+  if(ripple){ ctx.strokeStyle='rgba(216,67,21,'+Math.max(ripple.a,0)+')'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(ripple.x,ripple.y,ripple.r,0,7); ctx.stroke(); }
+  if(state==='flying'){
+    const th=curTh*Math.PI/180;
+    const x=V0*Math.cos(th)*tSim, y=V0*Math.sin(th)*tSim-0.5*G*tSim*tSim;
+    const vx=V0*Math.cos(th), vy=V0*Math.sin(th)-G*tSim;
+    const [sx,sy]=w2s(x,y);
+    if(tSim<0.45){
+      arrow(OX,OY, OX+Math.cos(th)*85, OY-Math.sin(th)*85, '#ef6c00', 4, 11);
+      label('v₀', OX+Math.cos(th)*100, OY-Math.sin(th)*100-6, 'bold 16px sans-serif', '#ef6c00');
+    }
+    const vn=Math.hypot(vx,vy);
+    arrow(sx,sy, sx+vx/vn*Math.min(vn*70,110), sy-vy/vn*Math.min(vn*70,110), '#00c853', 3.5, 10);
+    ctx.save(); ctx.translate(sx,sy); ctx.rotate(Math.atan2(-vy,vx));
+    ctx.fillStyle='#ff8f00'; ctx.fillRect(-7,-7,14,14);
+    ctx.strokeStyle='#e65100'; ctx.lineWidth=2; ctx.strokeRect(-7,-7,14,14);
+    ctx.strokeStyle='#e65100'; ctx.beginPath(); ctx.moveTo(-7,0); ctx.lineTo(7,0); ctx.stroke();
+    ctx.restore();
+    ctx.strokeStyle='#1a237e'; ctx.lineWidth=1.6;
+    ctx.beginPath(); ctx.arc(OX,OY,46,0,-th,true); ctx.stroke();
+    label('θ='+curTh+'°', OX+62*Math.cos(th/2)+8, OY-62*Math.sin(th/2), 'bold 14px sans-serif', '#1a237e');
+  }
+  if(lastLand && state==='landed'){
+    const [sx,sy]=w2s(lastLand.x,lastLand.y);
+    const vn=lastLand.v;
+    arrow(sx,sy, sx+lastLand.vx/vn*78, sy-lastLand.vy/vn*78, '#00c853', 3.5, 10);
+    label('v = '+vn.toFixed(3), sx+14, sy-24, 'bold 15px sans-serif', '#00695c');
+    label('d = '+lastLand.d.toFixed(3)+' R', sx+14, sy-2, '14px sans-serif', '#546e7a');
+  }
+  drawChart(state==='landed'?curTh:+slider.value, state==='landed'?lastLand.v:null);
+}
+function land(res){
+  state='landed'; landTime=performance.now();
+  if(trail.length>3){ ghosts.push(trail); if(ghosts.length>8) ghosts.shift(); }
+  const [sx,sy]=w2s(res.x,res.y);
+  const hue=Math.max(0, 120-(res.v-V0)*150);
+  dots.push({x:sx,y:sy,col:'hsl('+hue+',90%,45%)'}); if(dots.length>24) dots.shift();
+  ripple={x:sx,y:sy,r:6,a:1.2};
+  lastLand=res;
+  const isMin = Math.abs(curTh-30)<=0.5;
+  const st=document.getElementById('d-st');
+  st.textContent = isMin ? '✓ 最低速率落点（θ=30°，落点比 M 低）' : '已触弧 · 速率偏大';
+  st.style.color = isMin ? '#2e7d32' : '#d84315';
+  document.getElementById('d-t').textContent = res.t.toFixed(4)+' √(R/g)';
+  document.getElementById('d-d').textContent = res.d.toFixed(4)+' R';
+  document.getElementById('d-v').textContent = res.v.toFixed(4);
+  trail=[];
+}
+requestAnimationFrame(frame);
+launch();
+})();
+</script>
+</body>
+</html>

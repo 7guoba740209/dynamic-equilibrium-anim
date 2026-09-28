@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>动态平衡动画二：半球面绳拉球问题</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #eef2f7; margin: 0; padding: 18px; color: #2c3e50; }
+  .container { max-width: 1180px; margin: 0 auto; }
+  h1 { text-align: center; color: #1a3a5c; font-size: 22px; margin: 0 0 4px 0; }
+  .subtitle { text-align: center; color: #7f8c8d; font-size: 13px; margin-bottom: 16px; }
+  .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .panel { background: white; border-radius: 10px; padding: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+  .panel h3 { margin: 0 0 8px 0; color: #34495e; font-size: 15px; border-left: 3px solid #27ae60; padding-left: 8px; }
+  canvas { display: block; margin: 0 auto; background: #fafbfc; border: 1px solid #e8ecef; border-radius: 6px; }
+  .controls { margin-top: 10px; background: #f8f9fb; padding: 10px; border-radius: 6px; }
+  .controls label { display: block; font-size: 13px; margin-bottom: 4px; color: #555; }
+  .controls .val { color: #8e44ad; font-weight: bold; font-size: 15px; }
+  input[type=range] { width: 100%; accent-color: #27ae60; vertical-align: middle; }
+  .btn { background: #27ae60; color: white; border: none; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; margin-top: 6px; }
+  .btn:hover { background: #229954; }
+  .info { margin-top: 10px; line-height: 1.7; font-size: 13px; }
+  .info p { margin: 6px 0; }
+  .formula { background: #f0f4f8; padding: 8px 12px; border-radius: 4px; font-family: "Cambria Math", "Times New Roman", serif; font-size: 14px; margin: 8px 0; }
+  .G { color: #555; font-weight: bold; }
+  .N { color: #27ae60; font-weight: bold; }
+  .F { color: #8e44ad; font-weight: bold; }
+  .result { background: #fef9e7; padding: 8px 12px; border-radius: 4px; border-left: 3px solid #f39c12; margin-top: 8px; font-size: 14px; }
+  ul { margin: 4px 0; padding-left: 22px; }
+  li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>动态平衡动画二：半球面绳拉球问题</h1>
+  <div class="subtitle">解析法 · 三力动态平衡 · N、F 都单调增大</div>
+  <div class="layout">
+    <div class="panel">
+      <h3>场景演示</h3>
+      <canvas id="scene" width="500" height="380"></canvas>
+      <div class="controls">
+        <label>球心连线与竖直方向夹角 θ = <span class="val" id="thetaVal">30</span>°</label>
+        <input type="range" id="theta" min="0" max="70" value="30" step="1">
+        <label style="margin-top:6px;">水平绳始终拉紧，球缓慢沿光滑半球面上移</label>
+        <button class="btn" id="playBtn">▶ 自动播放</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>力矢量闭合三角形</h3>
+      <canvas id="vector" width="500" height="380"></canvas>
+      <div class="info">
+        <p>三力 <span class="G">G</span>、<span class="N">N</span>、<span class="F">F</span> 构成闭合三角形。
+        <span class="G">G</span> 大小方向不变，<span class="F">F</span> 方向始终水平，<span class="N">N</span> 方向沿半径向外（随θ变化）。</p>
+      </div>
+    </div>
+  </div>
+  <div class="panel" style="margin-top: 14px;">
+    <h3>力的变化曲线</h3>
+    <canvas id="chart" width="1100" height="270"></canvas>
+  </div>
+  <div class="panel" style="margin-top: 14px;">
+    <h3>解析与结论</h3>
+    <div class="info">
+      <p>球受三力平衡：<span class="G">重力 G = mg</span>（竖直向下），<span class="N">半球面支持力 N（沿半径向外）</span>，<span class="F">绳拉力 F（水平）</span>。</p>
+      <div class="formula">
+        N · cos θ = mg &nbsp;⇒&nbsp; N = mg / cos θ &nbsp;&nbsp;|&nbsp;&nbsp; N · sin θ = F &nbsp;⇒&nbsp; F = mg · tan θ
+      </div>
+      <ul>
+        <li><span class="N">N 单调增大</span>：θ 从 0° 增到 90°，N 从 mg 增大到 +∞</li>
+        <li><span class="F">F 单调增大</span>：θ 从 0° 增到 90°，F 从 0 增大到 +∞</li>
+        <li>解析法要点：建立直角坐标系，用正交分解列出平衡方程，直接求解 N、F 与 θ 的函数关系</li>
+        <li>与动画一对比：图解法适合判断"先增后减"等极值问题，解析法适合精确求函数关系</li>
+      </ul>
+      <div class="result">
+        当前状态：θ = <span id="curTheta">30</span>°，<span class="N">N = <span id="nval">1.15</span> mg</span>，<span class="F">F = <span id="fval">0.58</span> mg</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvasScene = document.getElementById('scene');
+const canvasVector = document.getElementById('vector');
+const canvasChart = document.getElementById('chart');
+const ctxS = canvasScene.getContext('2d');
+const ctxV = canvasVector.getContext('2d');
+const ctxC = canvasChart.getContext('2d');
+
+function getForces(thetaRad) {
+  const c = Math.cos(thetaRad);
+  if (c < 0.01) return { N: 999, F: 999 };
+  return { N: 1 / c, F: Math.tan(thetaRad) };
+}
+
+function drawArrow(ctx, x1, y1, x2, y2, color, label, labelOffset) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const len = Math.sqrt(dx*dx + dy*dy);
+  if (len < 2) return;
+  const ux = dx/len, uy = dy/len;
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2 - ux*8, y2 - uy*8);
+  ctx.stroke();
+  const ah = 11, aw = 6;
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - ah*ux + aw*uy, y2 - ah*uy - aw*ux);
+  ctx.lineTo(x2 - ah*ux - aw*uy, y2 - ah*uy + aw*ux);
+  ctx.closePath();
+  ctx.fill();
+  if (label) {
+    const off = labelOffset || 10;
+    ctx.fillStyle = color;
+    ctx.font = 'bold 13px Microsoft YaHei';
+    ctx.fillText(label, x2 + ux*off - 6, y2 + uy*off + 4);
+  }
+}
+
+function drawScene(thetaRad) {
+  const ctx = ctxS;
+  const W = canvasScene.width, H = canvasScene.height;
+  ctx.clearRect(0, 0, W, H);
+  const Ox = 220, Oy = 340;
+  const R = 150, r = 28;
+  const d = R + r;
+  // 地面
+  ctx.strokeStyle = '#aaa';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, Oy);
+  ctx.lineTo(W, Oy);
+  ctx.stroke();
+  ctx.strokeStyle = '#ccc';
+  for (let i = 0; i < W; i += 14) {
+    ctx.beginPath();
+    ctx.moveTo(i, Oy);
+    ctx.lineTo(i - 8, Oy + 8);
+    ctx.stroke();
+  }
+  // 半球面
+  const gradHemi = ctx.createLinearGradient(Ox, Oy - R, Ox, Oy);
+  gradHemi.addColorStop(0, '#d5dbdb');
+  gradHemi.addColorStop(1, '#e8eef3');
+  ctx.fillStyle = gradHemi;
+  ctx.beginPath();
+  ctx.arc(Ox, Oy, R, Math.PI, 2*Math.PI);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#2c3e50';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(Ox, Oy, R, Math.PI, 2*Math.PI);
+  ctx.stroke();
+  // 左墙
+  ctx.strokeStyle = '#888';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(12, 0);
+  ctx.lineTo(12, Oy);
+  ctx.stroke();
+  ctx.strokeStyle = '#ccc';
+  for (let i = 0; i < Oy; i += 14) {
+    ctx.beginPath();
+    ctx.moveTo(12, i);
+    ctx.lineTo(20, i + 8);
+    ctx.stroke();
+  }
+  // 球位置
+  const bx = Ox + d * Math.sin(thetaRad);
+  const by = Oy - d * Math.cos(thetaRad);
+  // 绳（水平，从球向左到墙）
+  if (Math.sin(thetaRad) > 0.005) {
+    ctx.strokeStyle = '#8e44ad';
+    ctx.lineWidth = 2.2;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(bx - r, by);
+    ctx.lineTo(12, by);
+    ctx.stroke();
+    // 绳固定端
+    ctx.fillStyle = '#8e44ad';
+    ctx.beginPath();
+    ctx.arc(12, by, 3, 0, 2*Math.PI);
+    ctx.fill();
+  }
+  // 半径线（O到球心，虚线）
+  ctx.strokeStyle = '#bbb';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(Ox, Oy);
+  ctx.lineTo(bx, by);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  // 球
+  const grad = ctx.createRadialGradient(bx - r*0.3, by - r*0.3, 2, bx, by, r);
+  grad.addColorStop(0, '#85c1e9');
+  grad.addColorStop(1, '#3498db');
+  ctx.fillStyle = grad;
+  ctx.strokeStyle = '#1f618d';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(bx, by, r, 0, 2*Math.PI);
+  ctx.fill();
+  ctx.stroke();
+  // 力矢量
+  const f = getForces(thetaRad);
+  const fScale = 40;
+  // 重力G向下
+  drawArrow(ctx, bx, by, bx, by + fScale, '#555', 'G', 12);
+  // 支持力N沿半径向外（sin θ, cos θ物理坐标）
+  const nx = Math.sin(thetaRad);
+  const ny_phys = Math.cos(thetaRad);
+  const Nlen = Math.min(f.N, 4) * fScale;
+  drawArrow(ctx, bx, by, bx + Nlen * nx, by - Nlen * ny_phys, '#27ae60', 'N', 12);
+  // 绳拉力F水平向左
+  const Flen = Math.min(f.F, 4) * fScale;
+  if (Flen > 2) {
+    drawArrow(ctx, bx, by, bx - Flen, by, '#8e44ad', 'F', 12);
+  }
+  // 角度θ
+  if (thetaRad > 0.02) {
+    ctx.strokeStyle = '#e67e22';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(Ox, Oy, 32, -Math.PI/2, -Math.PI/2 + thetaRad);
+    ctx.stroke();
+    ctx.fillStyle = '#e67e22';
+    ctx.font = '12px Microsoft YaHei';
+    ctx.fillText('θ', Ox + 6, Oy - 50);
+  }
+  // O点
+  ctx.fillStyle = '#2c3e50';
+  ctx.beginPath();
+  ctx.arc(Ox, Oy, 3, 0, 2*Math.PI);
+  ctx.fill();
+  ctx.fillStyle = '#2c3e50';
+  ctx.font = '11px Microsoft YaHei';
+  ctx.fillText('O', Ox - 12, Oy + 14);
+  // 说明
+  ctx.fillStyle = '#7f8c8d';
+  ctx.font = '11px Microsoft YaHei';
+  ctx.fillText('水平绳拉球沿光滑半球面缓慢上移，三力动态平衡', 10, 15);
+}
+
+function drawVector(thetaRad) {
+  const ctx = ctxV;
+  const W = canvasVector.width, H = canvasVector.height;
+  ctx.clearRect(0, 0, W, H);
+  const f = getForces(thetaRad);
+  const scale = 40;
+  // G起点A，G向下到B
+  const Ax = 260, Ay = 70;
+  const Bx = Ax, By = Ay + scale;
+  // N从B出发，方向(sin θ, cos θ)物理坐标，canvas y取反
+  const Nlen = Math.min(f.N, 4) * scale;
+  const Cx = Bx + Nlen * Math.sin(thetaRad);
+  const Cy = By - Nlen * Math.cos(thetaRad);
+  // 虚线辅助
+  ctx.strokeStyle = '#bbb';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  // N方向线（从B延伸）
+  ctx.beginPath();
+  ctx.moveTo(Bx, By);
+  ctx.lineTo(Bx + 250 * Math.sin(thetaRad), By - 250 * Math.cos(thetaRad));
+  ctx.stroke();
+  // F方向线（从A向左延伸）
+  ctx.beginPath();
+  ctx.moveTo(Ax, Ay);
+  ctx.lineTo(Ax - 250, Ay);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  // 力矢量：G从A到B，N从B到C，F从C到A（闭合）
+  drawArrow(ctx, Ax, Ay, Bx, By, '#555', 'G', 12);
+  drawArrow(ctx, Bx, By, Cx, Cy, '#27ae60', 'N', 12);
+  if (Math.abs(Cx - Ax) > 2) {
+    drawArrow(ctx, Cx, Cy, Ax, Ay, '#8e44ad', 'F', 12);
+  }
+  // 标注
+  ctx.fillStyle = '#7f8c8d';
+  ctx.font = '11px Microsoft YaHei';
+  ctx.fillText('N方向（沿半径，随θ变）', Bx + 30, By - 50);
+  ctx.fillText('F方向（水平，固定）', Ax - 160, Ay + 18);
+  ctx.fillText('G（竖直，固定）', Ax + 8, Ay + 50);
+  ctx.fillStyle = '#7f8c8d';
+  ctx.font = '11px Microsoft YaHei';
+  ctx.fillText('三力构成闭合三角形（N端点沿F方向线移动）', 10, 15);
+}
+
+function drawChart(thetaRad) {
+  const ctx = ctxC;
+  const W = canvasChart.width, H = canvasChart.height;
+  ctx.clearRect(0, 0, W, H);
+  const padL = 50, padR = 160, padT = 18, padB = 38;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const thetaMin = 0, thetaMax = 80;
+  const maxY = 4;
+  // 网格
+  ctx.strokeStyle = '#eee';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = padT + plotH - i * plotH / 4;
+    ctx.beginPath();
+    ctx.moveTo(padL, y);
+    ctx.lineTo(padL + plotW, y);
+    ctx.stroke();
+    ctx.fillStyle = '#888';
+    ctx.font = '11px Microsoft YaHei';
+    ctx.fillText(i.toString(), padL - 18, y + 4);
+  }
+  for (let t = 0; t <= 80; t += 10) {
+    const x = padL + (t - thetaMin) / (thetaMax - thetaMin) * plotW;
+    ctx.beginPath();
+    ctx.moveTo(x, padT);
+    ctx.lineTo(x, padT + plotH);
+    ctx.stroke();
+    ctx.fillStyle = '#888';
+    ctx.fillText(t + '°', x - 10, padT + plotH + 15);
+  }
+  // 轴
+  ctx.strokeStyle = '#555';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(padL, padT);
+  ctx.lineTo(padL, padT + plotH);
+  ctx.lineTo(padL + plotW, padT + plotH);
+  ctx.stroke();
+  ctx.fillStyle = '#555';
+  ctx.font = '12px Microsoft YaHei';
+  ctx.fillText('θ / °', padL + plotW - 30, padT + plotH + 32);
+  ctx.save();
+  ctx.translate(15, padT + plotH/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText('力的大小 / mg', -45, 0);
+  ctx.restore();
+  // 曲线
+  function drawCurve(color, getter) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    let started = false;
+    for (let t = 0; t <= 79; t += 0.5) {
+      const v = getter(t * Math.PI / 180);
+      const x = padL + (t - thetaMin) / (thetaMax - thetaMin) * plotW;
+      const y = padT + plotH - Math.min(v, maxY) / maxY * plotH;
+      if (v > maxY) {
+        if (started) { ctx.stroke(); started = false; }
+        ctx.beginPath();
+      } else {
+        if (!started) { ctx.moveTo(x, y); started = true; }
+        else ctx.lineTo(x, y);
+      }
+    }
+    if (started) ctx.stroke();
+  }
+  drawCurve('#27ae60', t => getForces(t).N);
+  drawCurve('#8e44ad', t => getForces(t).F);
+  // 当前θ
+  const curT = thetaRad * 180 / Math.PI;
+  const curX = padL + (curT - thetaMin) / (thetaMax - thetaMin) * plotW;
+  ctx.strokeStyle = '#7f8c8d';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  ctx.moveTo(curX, padT);
+  ctx.lineTo(curX, padT + plotH);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  const f = getForces(thetaRad);
+  [['#27ae60', f.N], ['#8e44ad', f.F]].forEach(([c, v]) => {
+    const y = padT + plotH - Math.min(v, maxY) / maxY * plotH;
+    ctx.fillStyle = c;
+    ctx.beginPath();
+    ctx.arc(curX, y, 5, 0, 2*Math.PI);
+    ctx.fill();
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  });
+  // 图例
+  const lgX = padL + plotW + 18;
+  ctx.fillStyle = '#27ae60';
+  ctx.fillRect(lgX, padT + 10, 18, 3);
+  ctx.fillStyle = '#333';
+  ctx.font = '12px Microsoft YaHei';
+  ctx.fillText('N 支持力', lgX + 24, padT + 15);
+  ctx.fillStyle = '#8e44ad';
+  ctx.fillRect(lgX, padT + 32, 18, 3);
+  ctx.fillStyle = '#333';
+  ctx.fillText('F 绳拉力', lgX + 24, padT + 37);
+  ctx.fillStyle = '#7f8c8d';
+  ctx.fillText('● 当前位置', lgX, padT + 60);
+  ctx.fillStyle = '#c0392b';
+  ctx.font = '11px Microsoft YaHei';
+  ctx.fillText('θ→90°时 N,F→∞', lgX, padT + 82);
+}
+
+let playing = false;
+let playDir = 1;
+
+function update() {
+  const theta = parseFloat(document.getElementById('theta').value);
+  const thetaRad = theta * Math.PI / 180;
+  document.getElementById('thetaVal').textContent = theta;
+  document.getElementById('curTheta').textContent = theta;
+  const f = getForces(thetaRad);
+  document.getElementById('nval').textContent = f.N.toFixed(2);
+  document.getElementById('fval').textContent = f.F.toFixed(2);
+  drawScene(thetaRad);
+  drawVector(thetaRad);
+  drawChart(thetaRad);
+}
+
+document.getElementById('theta').addEventListener('input', update);
+
+document.getElementById('playBtn').addEventListener('click', function() {
+  playing = !playing;
+  this.textContent = playing ? '⏸ 暂停' : '▶ 自动播放';
+  if (playing) animate();
+});
+
+function animate() {
+  if (!playing) return;
+  const slider = document.getElementById('theta');
+  let v = parseFloat(slider.value) + playDir * 0.6;
+  if (v >= 70) { v = 70; playDir = -1; }
+  if (v <= 0) { v = 0; playDir = 1; }
+  slider.value = v;
+  update();
+  requestAnimationFrame(animate);
+}
+
+update();
+</script>
+</body>
+</html>

@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>动态平衡·挡板转动（精美版）</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: linear-gradient(135deg, #f5f7fa 0%, #e8eef3 100%); color: #2c3e50; padding: 16px; min-height: 100vh; }
+  .wrap { max-width: 1240px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 14px; }
+  h1 { font-size: 24px; color: #1a3a5c; font-weight: 700; }
+  .sub { font-size: 13px; color: #7f8c8d; margin-top: 3px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .panel { background: white; border-radius: 12px; padding: 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+  .panel h3 { font-size: 15px; color: #34495e; margin-bottom: 10px; padding-left: 10px; border-left: 4px solid #3498db; }
+  .panel.right h3 { border-left-color: #27ae60; }
+  svg { display: block; width: 100%; height: auto; background: linear-gradient(180deg, #fafbfd 0%, #f0f4f8 100%); border-radius: 8px; }
+  .ctrl { background: #f8f9fb; padding: 12px; border-radius: 8px; margin-top: 12px; }
+  .ctrl label { display: block; font-size: 13px; color: #555; margin-bottom: 4px; }
+  .ctrl .v { color: #e74c3c; font-weight: 700; font-size: 16px; }
+  input[type=range] { width: 100%; accent-color: #3498db; }
+  .btns { margin-top: 8px; display: flex; gap: 8px; }
+  .btn { background: #3498db; color: white; border: none; padding: 7px 18px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all .2s; }
+  .btn:hover { background: #2980b9; transform: translateY(-1px); }
+  .btn.green { background: #27ae60; }
+  .btn.green:hover { background: #229954; }
+  .info { font-size: 13px; line-height: 1.7; color: #444; margin-top: 10px; }
+  .formula { background: linear-gradient(135deg, #f0f4f8, #e8eef3); padding: 10px 14px; border-radius: 6px; font-family: "Cambria Math", serif; font-size: 14px; margin: 8px 0; border-left: 3px solid #3498db; }
+  .G { color: #2c3e50; font-weight: 700; }
+  .N1 { color: #e74c3c; font-weight: 700; }
+  .N2 { color: #2980b9; font-weight: 700; }
+  .res { background: linear-gradient(135deg, #fef9e7, #fdf2d5); padding: 10px 14px; border-radius: 6px; border-left: 3px solid #f39c12; margin-top: 8px; font-size: 14px; }
+  ul { padding-left: 22px; margin: 6px 0; }
+  li { margin: 5px 0; }
+  .legend { display: flex; gap: 14px; justify-content: center; margin-top: 8px; font-size: 12px; }
+  .legend span { display: inline-flex; align-items: center; gap: 4px; }
+  .legend i { width: 16px; height: 3px; border-radius: 2px; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>动态平衡·挡板转动问题</h1>
+    <div class="sub">SVG 精美版 · 图解法 · 三力动态平衡 · N₁ 先减后增</div>
+  </header>
+
+  <div class="grid">
+    <div class="panel">
+      <h3>场景演示</h3>
+      <svg id="scene" viewBox="0 0 540 400" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+            <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#e5ecf2" stroke-width="1"/>
+          </pattern>
+          <linearGradient id="slopeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#d6dde4"/><stop offset="100%" stop-color="#a8b4bd"/>
+          </linearGradient>
+          <linearGradient id="plateGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#c0392b"/><stop offset="100%" stop-color="#922b21"/>
+          </linearGradient>
+          <radialGradient id="ballGrad" cx="35%" cy="35%">
+            <stop offset="0%" stop-color="#aed6f1"/><stop offset="60%" stop-color="#5499c7"/><stop offset="100%" stop-color="#2471a3"/>
+          </radialGradient>
+          <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="2.5"/>
+            <feOffset dx="1" dy="3"/>
+            <feComponentTransfer><feFuncA type="linear" slope="0.35"/></feComponentTransfer>
+            <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <marker id="arrowG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#2c3e50"/></marker>
+          <marker id="arrowN1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#e74c3c"/></marker>
+          <marker id="arrowN2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#2980b9"/></marker>
+        </defs>
+        <rect width="540" height="400" fill="url(#grid)"/>
+        <!-- 地面 -->
+        <line x1="0" y1="350" x2="540" y2="350" stroke="#7f8c8d" stroke-width="2"/>
+        <g stroke="#bdc3c7" stroke-width="1">
+          <line x1="0" y1="350" x2="-8" y2="358"/><line x1="20" y1="350" x2="12" y2="358"/>
+          <line x1="40" y1="350" x2="32" y2="358"/><line x1="60" y1="350" x2="52" y2="358"/>
+          <line x1="80" y1="350" x2="72" y2="358"/><line x1="100" y1="350" x2="92" y2="358"/>
+          <line x1="120" y1="350" x2="112" y2="358"/><line x1="140" y1="350" x2="132" y2="358"/>
+          <line x1="160" y1="350" x2="152" y2="358"/><line x1="180" y1="350" x2="172" y2="358"/>
+          <line x1="200" y1="350" x2="192" y2="358"/><line x1="220" y1="350" x2="212" y2="358"/>
+          <line x1="240" y1="350" x2="232" y2="358"/><line x1="260" y1="350" x2="252" y2="358"/>
+          <line x1="280" y1="350" x2="272" y2="358"/><line x1="300" y1="350" x2="292" y2="358"/>
+          <line x1="320" y1="350" x2="312" y2="358"/><line x1="340" y1="350" x2="332" y2="358"/>
+          <line x1="360" y1="350" x2="352" y2="358"/><line x1="380" y1="350" x2="372" y2="358"/>
+          <line x1="400" y1="350" x2="392" y2="358"/><line x1="420" y1="350" x2="412" y2="358"/>
+          <line x1="440" y1="350" x2="432" y2="358"/><line x1="460" y1="350" x2="452" y2="358"/>
+          <line x1="480" y1="350" x2="472" y2="358"/><line x1="500" y1="350" x2="492" y2="358"/>
+          <line x1="520" y1="350" x2="512" y2="358"/>
+        </g>
+        <!-- 斜面 -->
+        <polygon id="slopeShape" points="" fill="url(#slopeGrad)" stroke="#566573" stroke-width="2" filter="url(#shadow)"/>
+        <!-- 挡板 -->
+        <line id="plateLine" x1="0" y1="0" x2="0" y2="0" stroke="url(#plateGrad)" stroke-width="7" stroke-linecap="round" filter="url(#shadow)"/>
+        <circle id="hinge" cx="0" cy="0" r="5" fill="#2c3e50"/>
+        <!-- 角度弧 -->
+        <path id="betaArc" d="" fill="none" stroke="#e74c3c" stroke-width="1.5" stroke-dasharray="3,2"/>
+        <text id="betaText" x="0" y="0" font-size="13" fill="#c0392b" font-weight="600">β</text>
+        <text x="270" y="345" font-size="12" fill="#566573">α=30°</text>
+        <!-- 力矢量 -->
+        <line id="fG" x1="0" y1="0" x2="0" y2="0" stroke="#2c3e50" stroke-width="3" marker-end="url(#arrowG)"/>
+        <text id="fGLabel" font-size="13" font-weight="700" fill="#2c3e50">G</text>
+        <line id="fN1" x1="0" y1="0" x2="0" y2="0" stroke="#e74c3c" stroke-width="3" marker-end="url(#arrowN1)"/>
+        <text id="fN1Label" font-size="13" font-weight="700" fill="#e74c3c">N₁</text>
+        <line id="fN2" x1="0" y1="0" x2="0" y2="0" stroke="#2980b9" stroke-width="3" marker-end="url(#arrowN2)"/>
+        <text id="fN2Label" font-size="13" font-weight="700" fill="#2980b9">N₂</text>
+        <!-- 球 -->
+        <ellipse id="ballShadow" cx="0" cy="0" rx="0" ry="0" fill="rgba(0,0,0,0.15)"/>
+        <circle id="ball" cx="0" cy="0" r="0" fill="url(#ballGrad)" stroke="#1a5276" stroke-width="1.5" filter="url(#shadow)"/>
+        <circle id="ballHL" cx="0" cy="0" r="0" fill="rgba(255,255,255,0.4)"/>
+        <text x="10" y="18" font-size="11" fill="#7f8c8d">挡板绕O点缓慢转动 · 球始终平衡</text>
+      </svg>
+      <div class="ctrl">
+        <label>挡板与水平方向夹角 β = <span class="v" id="betaVal">90</span>°</label>
+        <input type="range" id="beta" min="50" max="170" value="90" step="0.5">
+        <div class="btns">
+          <button class="btn" id="playBtn">▶ 自动播放</button>
+          <button class="btn green" id="resetBtn">↺ 复位</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel right">
+      <h3>力矢量闭合三角形</h3>
+      <svg id="vect" viewBox="0 0 540 400" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="grid2" width="30" height="30" patternUnits="userSpaceOnUse">
+            <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#e5ecf2" stroke-width="1"/>
+          </pattern>
+          <marker id="aG2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#2c3e50"/></marker>
+          <marker id="aN12" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#e74c3c"/></marker>
+          <marker id="aN22" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#2980b9"/></marker>
+        </defs>
+        <rect width="540" height="400" fill="url(#grid2)"/>
+        <!-- 虚线辅助方向线 -->
+        <line id="dirN2" x1="0" y1="0" x2="0" y2="0" stroke="#aaa" stroke-width="1.2" stroke-dasharray="5,4"/>
+        <line id="dirN1" x1="0" y1="0" x2="0" y2="0" stroke="#aaa" stroke-width="1.2" stroke-dasharray="5,4"/>
+        <!-- 力矢量 -->
+        <line id="vG" x1="0" y1="0" x2="0" y2="0" stroke="#2c3e50" stroke-width="3.5" marker-end="url(#aG2)"/>
+        <line id="vN2" x1="0" y1="0" x2="0" y2="0" stroke="#2980b9" stroke-width="3.5" marker-end="url(#aN22)"/>
+        <line id="vN1" x1="0" y1="0" x2="0" y2="0" stroke="#e74c3c" stroke-width="3.5" marker-end="url(#aN12)"/>
+        <!-- 端点轨迹（N1端点应沿平行N2方向直线移动） -->
+        <line id="track" x1="0" y1="0" x2="0" y2="0" stroke="#f39c12" stroke-width="1.5" stroke-dasharray="2,3" opacity="0.7"/>
+        <text id="vGLabel" font-size="14" font-weight="700" fill="#2c3e50">G</text>
+        <text id="vN1Label" font-size="14" font-weight="700" fill="#e74c3c">N₁</text>
+        <text id="vN2Label" font-size="14" font-weight="700" fill="#2980b9">N₂</text>
+        <text id="dirN2Label" font-size="11" fill="#888">N₂方向（⊥斜面，固定）</text>
+        <text id="dirN1Label" font-size="11" fill="#888">N₁方向（⊥挡板，随β变）</text>
+        <text x="10" y="18" font-size="11" fill="#7f8c8d">三力闭合三角形 · N₁端点轨迹（橙虚线）平行于N₂方向</text>
+      </svg>
+      <div class="info">
+        <p>三力 <span class="G">G</span>、<span class="N1">N₁</span>、<span class="N2">N₂</span> 构成闭合三角形。<span class="G">G</span> 大小方向不变，<span class="N2">N₂</span> 方向始终垂直斜面，<span class="N1">N₁</span> 方向随挡板转动。</p>
+        <p style="color:#e67e22; margin-top:6px;">★ 图解法核心：N₁ 端点沿一条平行于 N₂ 方向的直线移动，从该轨迹可直观看出 N₁ 先减后增。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>力的变化曲线</h3>
+    <canvas id="chart" width="1200" height="260" style="width:100%;border-radius:8px;background:linear-gradient(180deg,#fafbfd,#f0f4f8);border:1px solid #e8ecef;"></canvas>
+    <div class="legend">
+      <span><i style="background:#e74c3c"></i> N₁ 挡板弹力</span>
+      <span><i style="background:#2980b9"></i> N₂ 斜面弹力</span>
+      <span><i style="background:#e67e22"></i> ● 极值点</span>
+      <span><i style="background:#7f8c8d"></i> ● 当前位置</span>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:14px;">
+    <h3>解析与结论</h3>
+    <div class="info">
+      <p>球受三力平衡：<span class="G">重力 G = mg</span>（竖直向下），<span class="N1">挡板弹力 N₁（垂直挡板）</span>，<span class="N2">斜面弹力 N₂（垂直斜面）</span>。</p>
+      <div class="formula">
+        N₁ = mg · sin α / sin(β − α) &nbsp;&nbsp;|&nbsp;&nbsp; N₂ = mg · sin β / sin(β − α)
+      </div>
+      <ul>
+        <li><span class="N2">N₂ 单调减小</span>：β 从 α⁺ 增到 180°，N₂ 从 +∞ 减到 0</li>
+        <li><span class="N1">N₁ 先减后增</span>：β = α + 90° = 120° 时取最小值 = mg · sin α = 0.5 mg</li>
+      </ul>
+      <div class="res">
+        当前：β = <span id="curBeta">90</span>°&nbsp;|&nbsp;
+        <span class="N1">N₁ = <span id="n1val">0.58</span> mg</span>&nbsp;|&nbsp;
+        <span class="N2">N₂ = <span id="n2val">1.15</span> mg</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SVGNS = "http://www.w3.org/2000/svg";
+const alpha = 30 * Math.PI / 180;
+const alphaDeg = 30;
+
+// 物理计算
+function getForces(betaRad) {
+  const s = Math.sin(betaRad - alpha);
+  if (Math.abs(s) < 0.01) return { N1: 999, N2: 999 };
+  return { N1: Math.sin(alpha) / s, N2: Math.sin(betaRad) / s };
+}
+function getBallPos(betaRad, r) {
+  const s = Math.sin(betaRad - alpha);
+  return {
+    x: r * (Math.cos(alpha) + Math.cos(betaRad)) / s,
+    y: r * (Math.sin(alpha) + Math.sin(betaRad)) / s
+  };
+}
+
+// 场景参数
+const Ox = 230, Oy = 350, scale = 75, r = 0.5;
+
+function $(id) { return document.getElementById(id); }
+
+function updateScene(betaRad) {
+  const bp = getBallPos(betaRad, r);
+  const bx = Ox + bp.x * scale;
+  const by = Oy - bp.y * scale;
+  const br = r * scale;
+
+  // 斜面
+  const slopeLen = 3.6;
+  const sx2 = Ox + slopeLen * scale * Math.cos(alpha);
+  const sy2 = Oy - slopeLen * scale * Math.sin(alpha);
+  $('slopeShape').setAttribute('points', `${Ox},${Oy} ${sx2},${Oy} ${sx2},${sy2}`);
+
+  // 挡板
+  const Llen = 3;
+  const px2 = Ox + Llen * scale * Math.cos(betaRad);
+  const py2 = Oy - Llen * scale * Math.sin(betaRad);
+  $('plateLine').setAttribute('x1', Ox);
+  $('plateLine').setAttribute('y1', Oy);
+  $('plateLine').setAttribute('x2', px2);
+  $('plateLine').setAttribute('y2', py2);
+  $('hinge').setAttribute('cx', Ox);
+  $('hinge').setAttribute('cy', Oy);
+
+  // β角弧
+  const arcR = 34;
+  const ax = Ox + arcR, ay = Oy;
+  const bx2 = Ox + arcR * Math.cos(betaRad);
+  const by2 = Oy - arcR * Math.sin(betaRad);
+  const largeArc = betaRad > Math.PI ? 1 : 0;
+  $('betaArc').setAttribute('d', `M ${ax} ${ay} A ${arcR} ${arcR} 0 ${largeArc} 0 ${bx2} ${by2}`);
+  $('betaText').setAttribute('x', Ox + 40);
+  $('betaText').setAttribute('y', Oy - 28);
+
+  // 球
+  $('ballShadow').setAttribute('cx', bx);
+  $('ballShadow').setAttribute('cy', Oy);
+  $('ballShadow').setAttribute('rx', br * 0.9);
+  $('ballShadow').setAttribute('ry', br * 0.2);
+  $('ball').setAttribute('cx', bx);
+  $('ball').setAttribute('cy', by);
+  $('ball').setAttribute('r', br);
+  $('ballHL').setAttribute('cx', bx - br * 0.3);
+  $('ballHL').setAttribute('cy', by - br * 0.3);
+  $('ballHL').setAttribute('r', br * 0.3);
+
+  // 力矢量
+  const f = getForces(betaRad);
+  const fScale = 45;
+  const clamp = v => Math.min(v, 3.5);
+
+  // G 向下
+  setLine('fG', bx, by, bx, by + fScale);
+  $('fGLabel').setAttribute('x', bx + 6);
+  $('fGLabel').setAttribute('y', by + fScale + 14);
+
+  // N1 方向 (sin β, -cos β) 物理坐标，SVG y向下
+  const n1x = Math.sin(betaRad), n1yp = -Math.cos(betaRad);
+  const n1L = clamp(f.N1) * fScale;
+  setLine('fN1', bx, by, bx + n1L * n1x, by - n1L * n1yp);
+  $('fN1Label').setAttribute('x', bx + n1L * n1x + 8);
+  $('fN1Label').setAttribute('y', by - n1L * n1yp);
+
+  // N2 方向 (-sin α, cos α)
+  const n2x = -Math.sin(alpha), n2yp = Math.cos(alpha);
+  const n2L = clamp(f.N2) * fScale;
+  setLine('fN2', bx, by, bx + n2L * n2x, by - n2L * n2yp);
+  $('fN2Label').setAttribute('x', bx + n2L * n2x - 22);
+  $('fN2Label').setAttribute('y', by - n2L * n2yp - 4);
+}
+
+function setLine(id, x1, y1, x2, y2) {
+  const el = $(id);
+  el.setAttribute('x1', x1); el.setAttribute('y1', y1);
+  el.setAttribute('x2', x2); el.setAttribute('y2', y2);
+}
+
+function updateVect(betaRad) {
+  const f = getForces(betaRad);
+  const sc = 45;
+  const clamp = v => Math.min(v, 3.5);
+  // G起点
+  const Ax = 240, Ay = 80;
+  const Bx = Ax, By = Ay + sc;
+  // N2 方向 (-sin α, cos α) 物理坐标
+  const n2x = -Math.sin(alpha), n2yp = Math.cos(alpha);
+  const N2L = clamp(f.N2) * sc;
+  const N2x = Ax + N2L * n2x, N2y = Ay - N2L * n2yp;
+  // N1 方向 (sin β, -cos β)
+  const n1x = Math.sin(betaRad), n1yp = -Math.cos(betaRad);
+  const N1L = clamp(f.N1) * sc;
+  const N1x = Bx + N1L * n1x, N1y = By - N1L * n1yp;
+
+  // 虚线方向线
+  setLine('dirN2', Ax, Ay, Ax + 260 * n2x, Ay - 260 * n2yp);
+  setLine('dirN1', Bx, By, Bx + 260 * n1x, By - 260 * n1yp);
+
+  // N1端点轨迹线（平行于N2方向，过G起点偏移）
+  // 轨迹：过B点平行于N2方向
+  setLine('track', Bx - 180 * n2x, By + 180 * n2yp, Bx + 180 * n2x, By - 180 * n2yp);
+
+  // 力矢量
+  setLine('vG', Ax, Ay, Bx, By);
+  setLine('vN2', Ax, Ay, N2x, N2y);
+  setLine('vN1', Bx, By, N1x, N1y);
+
+  $('vGLabel').setAttribute('x', Ax + 8); $('vGLabel').setAttribute('y', Ay + sc / 2);
+  $('vN2Label').setAttribute('x', N2x - 22); $('vN2Label').setAttribute('y', N2y - 4);
+  $('vN1Label').setAttribute('x', N1x + 8); $('vN1Label').setAttribute('y', N1y);
+
+  $('dirN2Label').setAttribute('x', Ax - 175);
+  $('dirN2Label').setAttribute('y', Ay + 75);
+  $('dirN1Label').setAttribute('x', Bx + 30);
+  $('dirN1Label').setAttribute('y', By + 55);
+}
+
+// 曲线图
+const canvas = $('chart');
+const ctx = canvas.getContext('2d');
+function drawChart(betaRad) {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  const padL = 55, padR = 30, padT = 20, padB = 40;
+  const pw = W - padL - padR, ph = H - padT - padB;
+  const bMin = 35, bMax = 175, maxY = 3;
+  // 渐变背景
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#fafbfd'); bg.addColorStop(1, '#f0f4f8');
+  ctx.fillStyle = bg; ctx.fillRect(padL, padT, pw, ph);
+  // 网格
+  ctx.strokeStyle = '#e0e6ec'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 3; i++) {
+    const y = padT + ph - i * ph / 3;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + pw, y); ctx.stroke();
+    ctx.fillStyle = '#888'; ctx.font = '12px Microsoft YaHei';
+    ctx.fillText(i.toString(), padL - 20, y + 4);
+  }
+  for (let b = 30; b <= 180; b += 15) {
+    const x = padL + (b - bMin) / (bMax - bMin) * pw;
+    if (x < padL - 1 || x > padL + pw + 1) continue;
+    ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT + ph); ctx.stroke();
+    ctx.fillStyle = '#888'; ctx.fillText(b + '°', x - 12, padT + ph + 16);
+  }
+  // 轴
+  ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, padT + ph); ctx.lineTo(padL + pw, padT + ph); ctx.stroke();
+  ctx.fillStyle = '#555'; ctx.font = '12px Microsoft YaHei';
+  ctx.fillText('β / °', padL + pw - 35, padT + ph + 33);
+  ctx.save(); ctx.translate(16, padT + ph/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText('力的大小 / mg', -45, 0); ctx.restore();
+
+  function drawCurve(color, getter, fill) {
+    ctx.strokeStyle = color; ctx.lineWidth = 2.5;
+    ctx.beginPath(); let started = false;
+    const pts = [];
+    for (let b = bMin + 1; b <= bMax - 1; b += 0.5) {
+      const v = getter(b * Math.PI / 180);
+      const x = padL + (b - bMin) / (bMax - bMin) * pw;
+      const y = padT + ph - Math.min(v, maxY) / maxY * ph;
+      pts.push({x, y, v});
+      if (v > maxY) { if (started) { ctx.stroke(); started = false; } ctx.beginPath(); }
+      else { if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y); }
+    }
+    if (started) ctx.stroke();
+    // 填充
+    if (fill) {
+      ctx.fillStyle = fill;
+      ctx.beginPath();
+      let first = true;
+      pts.forEach(p => {
+        if (p.v <= maxY) {
+          if (first) { ctx.moveTo(p.x, padT + ph); ctx.lineTo(p.x, p.y); first = false; }
+          else ctx.lineTo(p.x, p.y);
+        }
+      });
+      if (!first) { ctx.lineTo(pts[pts.length-1].x, padT + ph); ctx.closePath(); ctx.fill(); }
+    }
+  }
+  drawCurve('#e74c3c', b => getForces(b).N1, 'rgba(231,76,60,0.08)');
+  drawCurve('#2980b9', b => getForces(b).N2, 'rgba(41,128,185,0.08)');
+
+  // 极值点
+  const optB = 120, optN1 = getForces(optB * Math.PI/180).N1;
+  const optX = padL + (optB - bMin) / (bMax - bMin) * pw;
+  const optY = padT + ph - optN1 / maxY * ph;
+  ctx.beginPath(); ctx.arc(optX, optY, 7, 0, 2*Math.PI);
+  ctx.fillStyle = '#f39c12'; ctx.fill();
+  ctx.strokeStyle = 'white'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = '#c0392b'; ctx.font = 'bold 12px Microsoft YaHei';
+  ctx.fillText('极小值 β=120°, N₁=0.5mg', optX + 10, optY - 8);
+
+  // 当前位置
+  const curB = betaRad * 180 / Math.PI;
+  const curX = padL + (curB - bMin) / (bMax - bMin) * pw;
+  ctx.strokeStyle = '#7f8c8d'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(curX, padT); ctx.lineTo(curX, padT + ph); ctx.stroke();
+  ctx.setLineDash([]);
+  const f = getForces(betaRad);
+  [['#e74c3c', f.N1], ['#2980b9', f.N2]].forEach(([c, v]) => {
+    const y = padT + ph - Math.min(v, maxY) / maxY * ph;
+    ctx.beginPath(); ctx.arc(curX, y, 6, 0, 2*Math.PI);
+    ctx.fillStyle = c; ctx.fill();
+    ctx.strokeStyle = 'white'; ctx.lineWidth = 2; ctx.stroke();
+  });
+}
+
+let playing = false, dir = 1;
+function update() {
+  const beta = parseFloat($('beta').value);
+  const betaRad = beta * Math.PI / 180;
+  $('betaVal').textContent = beta.toFixed(1);
+  $('curBeta').textContent = beta.toFixed(1);
+  const f = getForces(betaRad);
+  $('n1val').textContent = f.N1.toFixed(2);
+  $('n2val').textContent = f.N2.toFixed(2);
+  updateScene(betaRad);
+  updateVect(betaRad);
+  drawChart(betaRad);
+}
+$('beta').addEventListener('input', update);
+$('playBtn').addEventListener('click', function() {
+  playing = !playing;
+  this.textContent = playing ? '⏸ 暂停' : '▶ 自动播放';
+  if (playing) animate();
+});
+$('resetBtn').addEventListener('click', function() {
+  playing = false;
+  $('playBtn').textContent = '▶ 自动播放';
+  $('beta').value = 90;
+  update();
+});
+// easing 动画
+function animate() {
+  if (!playing) return;
+  const slider = $('beta');
+  let v = parseFloat(slider.value) + dir * 0.5;
+  if (v >= 170) { v = 170; dir = -1; }
+  if (v <= 50) { v = 50; dir = 1; }
+  slider.value = v;
+  update();
+  requestAnimationFrame(animate);
+}
+update();
+</script>
+</body>
+</html>

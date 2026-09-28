@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>动态平衡·挡板转动（GeoGebra版）</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: linear-gradient(135deg, #f5f7fa 0%, #e8eef3 100%); color: #2c3e50; padding: 16px; min-height: 100vh; }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 14px; }
+  h1 { font-size: 24px; color: #1a3a5c; }
+  .sub { font-size: 13px; color: #7f8c8d; margin-top: 3px; }
+  .panel { background: white; border-radius: 12px; padding: 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); margin-bottom: 14px; }
+  .panel h3 { font-size: 15px; color: #34495e; margin-bottom: 10px; padding-left: 10px; border-left: 4px solid #27ae60; }
+  #ggb-container { width: 100%; min-height: 560px; border-radius: 8px; overflow: hidden; background: #fafbfc; position: relative; }
+  #ggb-container article { width: 100%; min-height: 560px; }
+  .loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #888; font-size: 14px; text-align: center; }
+  .loading .spinner { width: 40px; height: 40px; border: 4px solid #e0e6ec; border-top-color: #3498db; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 10px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .info { font-size: 13px; line-height: 1.7; color: #444; }
+  .info p { margin: 6px 0; }
+  .tip { background: linear-gradient(135deg, #e8f8f5, #d4efdf); padding: 10px 14px; border-radius: 6px; border-left: 3px solid #27ae60; font-size: 13px; margin-top: 8px; }
+  .tip b { color: #27ae60; }
+  .legend { display: flex; gap: 16px; justify-content: center; margin: 10px 0; font-size: 13px; flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 18px; height: 4px; border-radius: 2px; display: inline-block; }
+  .formula { background: linear-gradient(135deg, #f0f4f8, #e8eef3); padding: 10px 14px; border-radius: 6px; font-family: "Cambria Math", serif; font-size: 14px; margin: 8px 0; border-left: 3px solid #3498db; }
+  .err { color: #e74c3c; font-size: 13px; text-align: center; padding: 20px; display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>动态平衡·挡板转动（GeoGebra 版）</h1>
+    <div class="sub">原生几何画板 · 可拖拽缩放 · 滑块控制 β</div>
+  </header>
+
+  <div class="panel">
+    <h3>GeoGebra 交互画板</h3>
+    <div id="ggb-container">
+      <div class="loading" id="ld">
+        <div class="spinner"></div>
+        正在加载 GeoGebra 引擎，请稍候...
+      </div>
+      <div class="err" id="err">GeoGebra 加载失败，请检查网络连接后刷新页面。<br>或使用「精美版」HTML 动画。</div>
+    </div>
+    <div class="legend">
+      <span><i style="background:#2c3e50"></i> G 重力</span>
+      <span><i style="background:#e74c3c"></i> N₁ 挡板弹力</span>
+      <span><i style="background:#2980b9"></i> N₂ 斜面弹力</span>
+      <span><i style="background:#c0392b;height:8px;width:18px;border-radius:2px"></i> 挡板</span>
+      <span><i style="background:#3498db;height:14px;width:14px;border-radius:50%"></i> 小球</span>
+    </div>
+    <div class="tip">
+      <b>操作：</b>拖动画板中的滑块 β 改变挡板角度；滚轮缩放；按住空白处拖动平移视图。
+      观察红色 N₁ 矢量随 β 变化 —— 先减后增，β=120° 时最短。
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h3>解析与结论</h3>
+      <div class="info">
+        <p>球受三力平衡：重力 G = mg，挡板弹力 N₁（⊥挡板），斜面弹力 N₂（⊥斜面）。</p>
+        <div class="formula">
+          N₁ = mg · sin α / sin(β − α)<br>
+          N₂ = mg · sin β / sin(β − α)
+        </div>
+        <p>• N₂ 单调减小：β 从 α⁺ 到 180°，N₂ 从 +∞ → 0</p>
+        <p>• <b style="color:#e74c3c">N₁ 先减后增</b>：β = 120° 时最小 = 0.5 mg</p>
+        <p>• α = 30° 固定</p>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>GeoGebra 版 vs HTML 版</h3>
+      <div class="info">
+        <p><b>GeoGebra 优势：</b></p>
+        <p>• 原生几何引擎，矢量精确</p>
+        <p>• 可自由拖拽、缩放、平移</p>
+        <p>• 滑块原生交互，体验流畅</p>
+        <p>• 可导出为 .ggb 文件在 GeoGebra 软件中编辑</p>
+        <p style="margin-top:8px;"><b>HTML 版优势：</b></p>
+        <p>• 离线可用，无需联网</p>
+        <p>• 三视图（场景+图解+曲线）同屏</p>
+        <p>• 可定制性强，配色布局可控</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.geogebra.com/apps/deployggb.js"></script>
+<script>
+// 超时检测
+var loadTimer = setTimeout(function() {
+  document.getElementById('ld').style.display = 'none';
+  document.getElementById('err').style.display = 'block';
+}, 15000);
+
+var params = {
+  "appName": "classic",
+  "showToolBar": false,
+  "showAlgebraInput": false,
+  "showMenuBar": false,
+  "enableRightClick": false,
+  "enableShiftDragZoom": true,
+  "showResetIcon": true,
+  "showFullscreenButton": true,
+  "enableLabelDrags": false,
+  "showZoomButtons": true,
+  "playButton": false,
+  "appletOnLoad": function() {
+    clearTimeout(loadTimer);
+    document.getElementById('ld').style.display = 'none';
+    initGGB();
+  },
+  "errorDialogsActive": false
+};
+
+var applet = new GGBApplet(params, true);
+window.addEventListener('load', function() {
+  applet.inject('ggb-container');
+});
+
+function initGGB() {
+  var api = applet.getAppletObject();
+  if (!api) return;
+
+  api.setCoordSystem(-1, 6, -0.5, 5);
+  api.setAxesVisible(false, false);
+  api.setGridVisible(true);
+
+  // 角度（用°确保是角度类型）
+  var ok = true;
+  ok &= api.evalCommand("alpha = 30°");
+  ok &= api.evalCommand("beta = 90°");
+  ok &= api.evalCommand("r = 0.5");
+
+  // O点
+  ok &= api.evalCommand("O = (0, 0)");
+
+  // 斜面
+  ok &= api.evalCommand("S = (4 cos(alpha), 4 sin(alpha))");
+  ok &= api.evalCommand("l_slope = Segment(O, S)");
+
+  // 挡板
+  ok &= api.evalCommand("P = (3 cos(beta), 3 sin(beta))");
+  ok &= api.evalCommand("l_plate = Segment(O, P)");
+
+  // 球心
+  ok &= api.evalCommand("B = (r (cos(alpha) + cos(beta)) / sin(beta - alpha), r (sin(alpha) + sin(beta)) / sin(beta - alpha))");
+  ok &= api.evalCommand("ball = Circle(B, r)");
+
+  // 力大小
+  ok &= api.evalCommand("N1 = sin(alpha) / sin(beta - alpha)");
+  ok &= api.evalCommand("N2 = sin(beta) / sin(beta - alpha)");
+
+  // 重力 G (向下，大小1=mg)
+  ok &= api.evalCommand("G_end = (x(B), y(B) - 1)");
+  ok &= api.evalCommand("vG = Vector(B, G_end)");
+
+  // N1 矢量
+  ok &= api.evalCommand("N1_end = (x(B) + N1 sin(beta), y(B) - N1 cos(beta))");
+  ok &= api.evalCommand("vN1 = Vector(B, N1_end)");
+
+  // N2 矢量
+  ok &= api.evalCommand("N2_end = (x(B) - N2 sin(alpha), y(B) + N2 cos(alpha))");
+  ok &= api.evalCommand("vN2 = Vector(B, N2_end)");
+
+  // 角度弧（β角标注）
+  ok &= api.evalCommand("ang = Angle((1, 0), O, P)");
+  ok &= api.evalCommand("ang2 = Angle(P, O, S)");
+
+  // 设置颜色和样式
+  try {
+    api.setFixed("alpha", true);
+    api.setFixed("r", true);
+    api.setFixed("O", true);
+    api.setFixed("S", true);
+
+    api.setColor("l_slope", 90, 90, 90);
+    api.setThickness("l_slope", 4);
+    api.setColor("l_plate", 192, 57, 43);
+    api.setThickness("l_plate", 6);
+
+    api.setColor("ball", 52, 152, 219);
+    api.setFilling("ball", 0.35);
+    api.setThickness("ball", 2);
+
+    api.setColor("vG", 44, 62, 80);
+    api.setThickness("vG", 5);
+    api.setCaption("vG", "G = mg");
+    api.setLabelStyle("vG", 3);
+    api.setLabelVisible("vG", true);
+
+    api.setColor("vN1", 231, 76, 60);
+    api.setThickness("vN1", 5);
+    api.setCaption("vN1", "N₁");
+    api.setLabelStyle("vN1", 3);
+    api.setLabelVisible("vN1", true);
+
+    api.setColor("vN2", 41, 128, 185);
+    api.setThickness("vN2", 5);
+    api.setCaption("vN2", "N₂");
+    api.setLabelStyle("vN2", 3);
+    api.setLabelVisible("vN2", true);
+
+    api.setColor("N1", 231, 76, 60);
+    api.setColor("N2", 41, 128, 185);
+    api.setLabelVisible("N1", true);
+    api.setLabelVisible("N2", true);
+
+    api.setColor("ang", 192, 57, 43);
+    api.setLabelVisible("ang", true);
+    api.setCaption("ang", "β");
+    api.setColor("ang2", 90, 90, 90);
+    api.setLabelVisible("ang2", true);
+    api.setCaption("ang2", "α");
+
+    // 隐藏辅助点
+    ["S", "P", "G_end", "N1_end", "N2_end"].forEach(function(n) {
+      try { api.setLabelVisible(n, false); } catch(e) {}
+    });
+    try { api.setLabelVisible("B", true); api.setCaption("B", "球心"); } catch(e) {}
+    try { api.setLabelVisible("O", true); } catch(e) {}
+
+    // 显示β滑块
+    api.setLabelVisible("beta", true);
+    api.setLabelStyle("beta", 3);
+    api.setCaption("beta", "β (挡板角度)");
+  } catch(e) {
+    console.log("样式设置部分失败:", e);
+  }
+}
+</script>
+</body>
+</html>

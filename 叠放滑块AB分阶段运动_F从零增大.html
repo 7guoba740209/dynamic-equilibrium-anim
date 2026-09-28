@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>叠放滑块 A、B —— 拉力 F 从零增大时的运动阶段</title>
+<style>
+:root{
+  --bg:#eef2f7; --card:#ffffff; --ink:#1f2937; --sub:#5b6b7f; --line:#dbe3ec;
+  --Fc:#7c3aed; --f1c:#eab308; --f2c:#b45309; --vc:#ea580c;
+  --Ac:#bfdbfe; --Ae:#2563eb; --Bc:#ded7cf; --Be:#78716c;
+  --s1:#94a3b8; --s2:#2563eb; --s3:#ea580c;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;font-size:15px;line-height:1.68;}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 48px;}
+h1{font-size:23px;margin:0 0 6px;letter-spacing:.4px;}
+.sub{color:var(--sub);font-size:13.5px;margin:0 0 16px;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:14px 16px;box-shadow:0 1px 3px rgba(21,42,72,.06);margin-bottom:14px;}
+.card h2{font-size:16.5px;margin:0 0 12px;padding-left:9px;border-left:4px solid #2563eb;line-height:1.25;}
+.gridAB{display:grid;grid-template-columns:1.08fr 1fr;gap:14px;align-items:start;margin-bottom:14px;}
+@media (max-width:980px){.gridAB{grid-template-columns:1fr;}}
+.grid{display:grid;grid-template-columns:1fr 360px;gap:14px;align-items:start;margin-bottom:14px;}
+@media (max-width:980px){.grid{grid-template-columns:1fr;}}
+
+.stageBar{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;
+  padding:3px 12px;font-size:13.5px;font-weight:700;color:#fff;letter-spacing:.3px;}
+.chip.s1{background:var(--s1);} .chip.s2{background:var(--s2);} .chip.s3{background:var(--s3);}
+.stageDesc{font-size:13.5px;color:var(--sub);}
+
+table.data{width:100%;border-collapse:collapse;font-size:14px;}
+table.data th,table.data td{border:1px solid var(--line);padding:5px 8px;text-align:left;}
+table.data th{background:#f4f7fb;font-weight:600;color:#33465e;width:46%;}
+table.data td{font-variant-numeric:tabular-nums;font-weight:600;}
+
+.ctrls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px;}
+.ctrls .lbl{font-size:14px;color:#33465e;font-weight:600;}
+input[type=range]{width:100%;accent-color:#2563eb;height:22px;cursor:pointer;}
+.btn{border:1px solid #c3cfe0;background:#fff;color:#22334a;border-radius:8px;
+  padding:6px 14px;font-size:14px;cursor:pointer;font-family:inherit;transition:.15s;}
+.btn:hover{background:#f2f7ff;border-color:#8db4e8;}
+.btn.on{background:#2563eb;border-color:#2563eb;color:#fff;}
+.btn.primary{background:#1d4ed8;border-color:#1d4ed8;color:#fff;}
+.btn.primary:hover{background:#1a44bd;}
+
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:#465a72;margin-top:8px;}
+.legend i{display:inline-block;width:22px;height:4px;border-radius:2px;vertical-align:middle;margin-right:5px;}
+
+.formula{font-style:italic;font-family:"Times New Roman",Georgia,serif;font-size:15.5px;}
+.mono{font-variant-numeric:tabular-nums;}
+.note{font-size:13px;color:var(--sub);}
+ul.tight{margin:6px 0 0;padding-left:20px;}
+ul.tight li{margin:3px 0;}
+.kbd{background:#eef2f8;border:1px solid #d3dded;border-radius:5px;padding:0 5px;font-size:13px;}
+.hl{background:#fff6d8;border-radius:3px;padding:0 3px;}
+svg{display:block;width:100%;height:auto;}
+.ansTbl{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px;}
+.ansTbl th,.ansTbl td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top;}
+.ansTbl th{background:#eef4fc;color:#22334a;}
+.ansTbl tr:nth-child(even) td{background:#fafcff;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>叠放滑块 A、B 模型：拉力 F 从零增大时的三个阶段</h1>
+  <p class="sub">m<sub>A</sub>=2 kg、M<sub>B</sub>=2 kg；A、B 间 μ<sub>1</sub>=0.2；B 与地面间 μ<sub>2</sub>=0.4（取 g=10 m/s²）。A、B 初始静止，F 由零逐渐增大。</p>
+
+  <div class="card">
+    <h2>题目与模型</h2>
+    <p style="margin:0 0 6px;">小物块 <b>A</b> 叠放在<b>足够长</b>的木板 <b>B</b> 上，B 放在水平地面上，A、B 最初都静止。现对 B 施加水平向右的拉力 F，并让 F 由零缓慢增大。求 A、B 各阶段的加速度以及 F 相应的取值范围。</p>
+    <ul class="tight note">
+      <li>研究对象：整体 (A+B) 用于判断"能否被拉动"；隔离 A 用于判断"A 能否跟上 B"。</li>
+      <li>关键：B 与地面之间的正压力是 <b>(M+m)g = 40 N</b>，不是 Mg。</li>
+      <li>两个临界点是本题的全部骨架：<b>整体启动</b>与<b>A、B 相对滑动</b>。</li>
+    </ul>
+  </div>
+
+  <div class="gridAB">
+    <div class="card" style="margin-bottom:0;">
+      <h2>互动演示（地面为参照物）</h2>
+      <div class="stageBar">
+        <span class="chip s1" id="chip">阶段一 · 整体静止</span>
+        <span class="stageDesc" id="chipDesc">F ≤ 16 N：地面对 B 的静摩擦恰好与 F 平衡</span>
+      </div>
+      <svg id="scene" viewBox="0 0 800 368" role="img" aria-label="叠放滑块运动示意图"></svg>
+      <div class="legend">
+        <span><i style="background:var(--Fc)"></i>拉力 <span class="formula">F</span></span>
+        <span><i style="background:var(--f1c)"></i>A、B 间摩擦力 <span class="formula">f<sub>1</sub></span></span>
+        <span><i style="background:var(--f2c)"></i>B 与地面间摩擦力 <span class="formula">f<sub>2</sub></span></span>
+        <span><i style="background:var(--vc)"></i>速度</span>
+        <span class="note">箭头长度按同一比例 12 px/N；虚线 = A 在地面系中的初始位置。</span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:0;">
+      <h2>a – F 图像：分段的斜率与转折</h2>
+      <svg id="chart" viewBox="0 0 1020 316" role="img" aria-label="加速度与拉力的关系图"></svg>
+      <p class="note" style="margin:8px 0 0;">整段图像只有两条"折线"：<b>F ≤ 16 N</b> 时加速度恒为 0；<b>16～24 N</b> 时 A、B 一起加速，直线斜率 (m+M)<sup>-1</sup> = 1/4；<b>F &gt; 24 N</b> 后分叉 —— <span class="formula">a<sub>A</sub></span> 锁定在 μ<sub>1</sub>g = 2 m/s² 的水平线上，<span class="formula">a<sub>B</sub></span> 改走斜率 M<sup>-1</sup> = 1/2 的陡直线。</p>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card" style="margin-bottom:0;">
+      <h2>实时数据</h2>
+      <table class="data">
+        <tr><th>拉力 <span class="formula">F</span></th><td id="dF">0.0 N</td></tr>
+        <tr><th>A 的加速度 <span class="formula">a<sub>A</sub></span></th><td id="daA">0 m/s²</td></tr>
+        <tr><th>B 的加速度 <span class="formula">a<sub>B</sub></span></th><td id="daB">0 m/s²</td></tr>
+        <tr><th>A、B 间摩擦力 <span class="formula">f<sub>1</sub></span></th><td id="df1">0.00 N</td></tr>
+        <tr><th>B、地面间摩擦力 <span class="formula">f<sub>2</sub></span></th><td id="df2">0.00 N</td></tr>
+        <tr><th>A 的速度 <span class="formula">v<sub>A</sub></span></th><td id="dvA">0.00 m/s</td></tr>
+        <tr><th>B 的速度 <span class="formula">v<sub>B</sub></span></th><td id="dvB">0.00 m/s</td></tr>
+        <tr><th>A 相对 B 滑过 Δs</th><td id="dds">0.00 m</td></tr>
+        <tr><th>已运动时间 <span class="formula">t</span></th><td id="dt">0.00 s</td></tr>
+      </table>
+      <p class="note" style="margin:8px 0 0;" id="hint">拖动滑块改变 F，系统会从静止重新开始运动。</p>
+    </div>
+
+    <div class="card" style="margin-bottom:0;">
+      <h2>控制面板</h2>
+      <div class="ctrls">
+        <span class="lbl">拉力 F</span>
+        <span class="formula" id="Fshow" style="font-size:17px;font-weight:700;color:#6d28d9;min-width:78px;">0.0 N</span>
+        <span class="note" style="min-width:150px;">（拖动后从静止重新计时）</span>
+      </div>
+      <input type="range" id="Frange" min="0" max="30" step="0.1" value="0">
+      <div class="ctrls" style="margin-top:10px;">
+        <button class="btn primary" id="btnDemo">▶ 演示：F 由零增大（临界点自动停顿）</button>
+        <button class="btn" id="btnPlay">⏸ 暂停</button>
+        <button class="btn" id="btnReset">↺ 重置</button>
+        <span class="lbl" style="margin-left:6px;">倍速</span>
+        <button class="btn spd" data-s="0.5">0.5×</button>
+        <button class="btn spd on" data-s="1">1×</button>
+        <button class="btn spd" data-s="2">2×</button>
+        <span class="btn" id="btnQuiet" style="cursor:default;border-style:dashed;">F &lt; 16 N 时按"暂停"可静止观察受力</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>解题过程（建立模型 → 找临界 → 分段求解）</h2>
+
+    <p style="margin:0 0 4px;"><b>第一步：把两个接触面的"最大静摩擦"先算出来</b>（本题 99% 的错误都出在这里）</p>
+    <ul class="tight">
+      <li>A、B 之间：正压力等于 A 的重力，<span class="formula">f<sub>1max</sub> = μ<sub>1</sub>m g = 0.2×2×10 = <b>4 N</b></span>。</li>
+      <li>B 与地面之间：正压力等于总重力，<span class="formula">f<sub>2max</sub> = μ<sub>2</sub>(M+m)g = 0.4×40 = <b>16 N</b></span>。</li>
+    </ul>
+
+    <p style="margin:14px 0 4px;"><b>第二步：判整体 —— 用整体法找"整体启动"临界 F<sub>1</sub></b></p>
+    <ul class="tight">
+      <li>F ≤ 16 N 时，地面静摩擦大小可调，总与 F 平衡 → 整体静止，<span class="formula">a<sub>A</sub> = a<sub>B</sub> = 0</span>，此时 <span class="formula">f<sub>2</sub> = F</span>（静摩擦，方向向左）。</li>
+      <li>F 一旦超过 16 N，地面摩擦"顶不住"了，变成滑动摩擦 16 N → 整体开始向右加速。</li>
+    </ul>
+
+    <p style="margin:14px 0 4px;"><b>第三步：判 A —— 用隔离法找"A 能否跟上 B"的临界 F<sub>2</sub></b></p>
+    <ul class="tight">
+      <li>设 A、B 一起加速，整体法：<span class="formula">a = (F − f<sub>2</sub>)/(m+M) = (F − 16)/4</span>。</li>
+      <li>A 的水平方向只有一个力 —— B 给它的静摩擦 <span class="formula">f<sub>1</sub></span>，故 <span class="formula">f<sub>1</sub> = m·a = 2a = (F − 16)/4</span>。</li>
+      <li>但 <span class="formula">f<sub>1</sub></span> 不可能超过 4 N，令 (F − 16)/4 ≤ 4，得 <span class="formula">F ≤ 24 N</span>。</li>
+      <li>所以 F 超过 24 N 后，A 已"用尽全力"，只能提供 μ<sub>1</sub>mg = 4 N 的滑动摩擦，<span class="formula">a<sub>A</sub> = μ<sub>1</sub>g = 2 m/s²</span> 保持不变，而 B 跑得越来越快。</li>
+    </ul>
+
+    <p style="margin:14px 0 4px;"><b>第四步：分三种情形列方程</b></p>
+    <table class="ansTbl">
+      <tr>
+        <th style="width:17%;">情形</th><th style="width:23%;">F 的取值范围</th><th style="width:30%;">A 的加速度</th><th style="width:30%;">B 的加速度</th>
+      </tr>
+      <tr>
+        <td><b>阶段一</b><br>整体静止</td>
+        <td>0 ≤ F ≤ 16 N</td>
+        <td><span class="formula">a<sub>A</sub> = 0</span></td>
+        <td><span class="formula">a<sub>B</sub> = 0</span></td>
+      </tr>
+      <tr>
+        <td><b>阶段二</b><br>A、B 一起加速<br><span class="note">（相对静止）</span></td>
+        <td>16 N &lt; F ≤ 24 N</td>
+        <td colspan="2" style="text-align:center;"><span class="formula">a<sub>A</sub> = a<sub>B</sub> = (F − 16)/4</span>，取值范围 <span class="formula">0 &lt; a ≤ 2 m/s²</span></td>
+      </tr>
+      <tr>
+        <td><b>阶段三</b><br>A、B 相对滑动<br><span class="note">（A 比 B 慢，A 相对 B 向左滑）</span></td>
+        <td>F &gt; 24 N</td>
+        <td><span class="formula">a<sub>A</sub> = μ<sub>1</sub>g = 2 m/s²</span><br><span class="note">与 F 无关，恒定</span></td>
+        <td><span class="formula">a<sub>B</sub> = (F − μ<sub>2</sub>(M+m)g − μ<sub>1</sub>mg)/M</span><br><span class="formula">= (F − 20)/2 &gt; 2 m/s²</span></td>
+      </tr>
+    </table>
+
+    <p style="margin:14px 0 4px;"><b>第五步：核对两个临界时刻的自洽性</b></p>
+    <ul class="tight">
+      <li>F = 16 N：地面摩擦由静摩擦 F 无缝切换到滑动摩擦 16 N，a 从 0 连续上升，无突变。</li>
+      <li>F = 24 N：阶段二给出 a = (24−16)/4 = 2 m/s²；阶段三给出 a<sub>B</sub> = (24−20)/2 = 2 m/s²，两段在临界点<b>严丝合缝接上</b>——这说明分段没错。</li>
+      <li>阶段三中 <span class="formula">a<sub>B</sub> &gt; a<sub>A</sub></span> 恒成立（F &gt; 24），"B 把 A 甩在后面"与"摩擦方向不变"两件事互相印证，逻辑闭合。</li>
+    </ul>
+
+    <p style="margin:14px 0 4px;"><b>物理规律小结（可迁移）</b></p>
+    <ul class="tight">
+      <li><b>先整体、后隔离</b>：整体法判"动不动"，隔离法判"各自动多少"。</li>
+      <li><b>正压力按接触面对应求</b>：A–B 之间只承担 A 的重力；B–地面之间承担两者总重力。</li>
+      <li><b>临界条件就是"摩擦力用尽"</b>：把"需要的摩擦"与"能提供的最大摩擦"相比，取等号即临界。</li>
+      <li><b>一旦相滑动</b>，摩擦力由"被动的静摩擦"变为"主动的定值滑动摩擦"，加速度从此可解。</li>
+      <li>快速验算：<b>a<sub>A</sub></b> 的上限永远是 μ<sub>1</sub>g；<b>整体</b>的最大共同加速度也是 μ<sub>1</sub>g（本题 2 m/s²）。</li>
+    </ul>
+  </div>
+
+</div>
+
+<!-- 全局箭头 marker：只定义一次，永不隐藏 -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="ah-F" markerWidth="10" markerHeight="10" refX="9" refY="3.5" orient="auto" markerUnits="userSpaceOnUse"><polygon points="0 0,9 3.5,0 7" fill="#7c3aed"/></marker>
+  <marker id="ah-f1" markerWidth="10" markerHeight="10" refX="9" refY="3.5" orient="auto" markerUnits="userSpaceOnUse"><polygon points="0 0,9 3.5,0 7" fill="#eab308"/></marker>
+  <marker id="ah-f2" markerWidth="10" markerHeight="10" refX="9" refY="3.5" orient="auto" markerUnits="userSpaceOnUse"><polygon points="0 0,9 3.5,0 7" fill="#b45309"/></marker>
+  <marker id="ah-v" markerWidth="10" markerHeight="10" refX="9" refY="3.5" orient="auto" markerUnits="userSpaceOnUse"><polygon points="0 0,9 3.5,0 7" fill="#ea580c"/></marker>
+  <marker id="ah-A" markerWidth="10" markerHeight="10" refX="9" refY="3.5" orient="auto" markerUnits="userSpaceOnUse"><polygon points="0 0,9 3.5,0 7" fill="#2563eb"/></marker>
+  <marker id="ah-B" markerWidth="10" markerHeight="10" refX="9" refY="3.5" orient="auto" markerUnits="userSpaceOnUse"><polygon points="0 0,9 3.5,0 7" fill="#ea580c"/></marker>
+  <marker id="ah-Fb" markerWidth="15" markerHeight="15" refX="13" refY="5.5" orient="auto" markerUnits="userSpaceOnUse"><polygon points="0 0,13 5.5,0 11" fill="#7c3aed"/></marker>
+  <marker id="ah-f1b" markerWidth="15" markerHeight="15" refX="13" refY="5.5" orient="auto" markerUnits="userSpaceOnUse"><polygon points="0 0,13 5.5,0 11" fill="#eab308"/></marker>
+  <marker id="ah-f2b" markerWidth="15" markerHeight="15" refX="13" refY="5.5" orient="auto" markerUnits="userSpaceOnUse"><polygon points="0 0,13 5.5,0 11" fill="#b45309"/></marker>
+  <marker id="ah-vb" markerWidth="14" markerHeight="14" refX="12" refY="5" orient="auto" markerUnits="userSpaceOnUse"><polygon points="0 0,12 5,0 10" fill="#ea580c"/></marker>
+</defs></svg>
+
+<script>
+/* =========================================================
+   参数与模型
+   ========================================================= */
+const P = { m:2, M:2, mu1:0.2, mu2:0.4, g:10 };
+P.f1max = P.mu1 * P.m * P.g;              // 4 N   A、B 间
+P.f2max = P.mu2 * (P.m + P.M) * P.g;      // 16 N  B、地面间
+
+const FC1 = P.f2max;                                           // 16 N 整体启动
+const FC2 = P.f2max + P.f1max * (P.m + P.M) / P.m;             // 24 N A、B 相对滑动
+const FMAX = 30;                                               // 演示最大拉力
+const NODES = [FC1, FC2];        // 演示经过这些临界点自动暂停（过程节点）
+
+/* 曲线端点（随参数自动算，避免硬编码） */
+const A_COMMON_END = (FC2 - FC1) / (P.m + P.M);   // 阶段二末共同加速度 = 2 m/s²
+const A_B_END = (FMAX - P.f2max - P.f1max) / P.M; // 阶段三末 B 加速度 = 5 m/s²
+
+/* 由 F 解出当前阶段 */
+function solve(F){
+  if (F <= FC1 + 1e-9){
+    return { stage:1, aA:0, aB:0, f1:0, f2:F, f2static:true,
+             title:'阶段一 · 整体静止',
+             desc:'F ≤ 16 N：地面对 B 的静摩擦与 F 恰好平衡，A、B 都静止' };
+  }
+  if (F <= FC2 + 1e-9){
+    const a = (F - FC1) / (P.m + P.M);
+    return { stage:2, aA:a, aB:a, f1:P.m*a, f2:P.f2max, f2static:false,
+             title:'阶段二 · A、B 一起加速',
+             desc:'16 N < F ≤ 24 N：A、B 相对静止，一起加速，a = (F − 16)/4' };
+  }
+  const aB = (F - P.f2max - P.f1max) / P.M;
+  return { stage:3, aA:P.f1max/P.m, aB:aB, f1:P.f1max, f2:P.f2max, f2static:false,
+           title:'阶段三 · A、B 相对滑动',
+           desc:'F > 24 N：A 所受摩擦力已达上限，A 的加速度锁定为 2 m/s²，B 越跑越快' };
+}
+
+/* =========================================================
+   运动状态（数值积分）
+   ========================================================= */
+const S = {
+  F:0, t:0, vA:0, vB:0, xB:0, xrel:0,
+  playing:false, demo:false, speed:1, capped:false,
+  nodeIdx:0,            // 指向下一个要停留的临界点
+  nodePause:false,      // 当前是否因"过程节点"而暂停
+  nodeAt:0              // 刚刚停留的临界 F 值
+};
+function resetMotion(){ S.t=0; S.vA=0; S.vB=0; S.xB=0; S.xrel=0; S.capped=false; }
+
+/* =========================================================
+   场景几何常量
+   ========================================================= */
+const SC   = 12;        // 力比例  px/N（全场统一）
+const PXM  = 12;        // 位移比例 px/m
+const VS   = 20;        // 速度比例 px/(m/s)
+const W    = 800;       // 场景宽度（与显示宽度基本 1:1）
+const GY   = 314;       // 地面线
+const BX0  = 70, BX1 = 490, BT = 262, BB = 314;   // 木板 B
+const AW = 76, AH = 60;                            // 物块 A
+const A0   = 388;                                  // A 初始左边缘
+const AMINX = 96;                                  // （保留，已不再使用）
+const XB_CAP = 24;                                  // B 在地面系中屏幕上最多右移 24 m，防跑出画面
+const YF1 = 256, YF1B = 282, YF = 282, YF2 = 300;  // 各力的高度
+const YVA = 166, YVB = 238, YSLIDE = 48;           // 速度与滑动标注高度
+
+/* =========================================================
+   工具
+   ========================================================= */
+function arr(x1,y1,x2,y2,color,mk,w){
+  const dx=x2-x1, dy=y2-y1, L=Math.hypot(dx,dy);
+  if(L < 1.2) return '';
+  return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+color+
+         '" stroke-width="'+(w||3.4)+'" stroke-linecap="round" marker-end="url(#'+mk+')"/>';
+}
+function lab(x,y,text,color,size,anchor){
+  return '<text x="'+x+'" y="'+y+'" font-size="'+(size||13.5)+'" font-weight="700" fill="'+color+
+         '" text-anchor="'+(anchor||'start')+'" stroke="#ffffff" stroke-width="3.6" '+
+         'paint-order="stroke" stroke-linejoin="round" font-family="Times New Roman,Georgia,serif">'+text+'</text>';
+}
+function lab2(x,y,text,color,size,anchor,bold){
+  return '<text x="'+x+'" y="'+y+'" font-size="'+(size||13)+'" font-weight="'+(bold?700:400)+'" fill="'+color+
+         '" text-anchor="'+(anchor||'start')+'" stroke="#ffffff" stroke-width="3.4" '+
+         'paint-order="stroke" stroke-linejoin="round">'+text+'</text>';
+}
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+/* SVG 下标（不用 Unicode 下标字符，避免字体缺字形） */
+function sb(t){ return '<tspan dy="4.5" font-size="0.72em">'+t+'</tspan><tspan dy="-4.5"></tspan>'; }
+
+/* =========================================================
+   场景绘制
+   ========================================================= */
+const sceneEl = document.getElementById('scene');
+
+function drawScene(){
+  const d = solve(S.F);
+  /* 地面为参照物：木板 B 在地面系中向右位移 xB；A 相对 B 左滑 xrel（<0） */
+  const xBrender = Math.min(S.xB, XB_CAP);          // B 在屏幕上的右移上限，防跑出画面
+  const Bleft = BX0 + xBrender * PXM;               // B 左边缘屏幕坐标（随 B 右移）
+  const boardW = BX1 - BX0;
+  const Bend   = Bleft + boardW;                    // B 右端屏幕坐标
+  let Aoff = (A0 - BX0) + S.xrel * PXM;             // A 相对 B 左边缘的偏移（xrel<0 → A 向左滑）
+  if(Aoff < 12){ Aoff = 12; S.capped = true; }       // A 滑到 B 左端附近 → 钳制
+  const xA   = Bleft + Aoff;                         // A 左边缘屏幕坐标
+  const acx  = xA + AW/2;
+  const aTop = BT - AH;
+  /* 两物体重心：受力统一画在重心上 */
+  const cxA = acx,              cyA = aTop + AH/2;
+  const cxB = Bleft + boardW/2, cyB = (BT + BB) / 2;
+
+  let g = '';
+
+  /* ---- 地面（参照物，固定不动）：画静止的刻度，不随 B 滚动 ---- */
+  g += '<rect x="0" y="'+GY+'" width="'+W+'" height="'+(368-GY)+'" fill="#e7ecf3"/>';
+  g += '<line x1="0" y1="'+GY+'" x2="'+W+'" y2="'+GY+'" stroke="#94a3b8" stroke-width="2.4"/>';
+  for(let x = 0; x < W; x += 48){
+    g += '<line x1="'+x+'" y1="'+GY+'" x2="'+(x-11)+'" y2="'+(GY+11)+'" stroke="#aab8c8" stroke-width="1.6"/>';
+  }
+
+  /* ---- 木板 B（足够长，随地面系右移） ---- */
+  g += '<rect x="'+Bleft+'" y="'+BT+'" width="'+boardW+'" height="'+(BB-BT)+'" rx="3" fill="#ded7cf" stroke="#78716c" stroke-width="2"/>';
+
+  /* ---- A 在地面系中的初始位置（固定参照标记） ---- */
+  g += '<line x1="'+A0+'" y1="186" x2="'+A0+'" y2="'+aTop+'" stroke="#0f766e" stroke-width="2.2" stroke-dasharray="4,3"/>';
+
+  /* ---- 物块 A ---- */
+  g += '<rect x="'+xA+'" y="'+aTop+'" width="'+AW+'" height="'+AH+'" rx="3" fill="#bfdbfe" stroke="#2563eb" stroke-width="2.4"/>';
+
+  /* ---- 力：F（作用在 B 重心，向右） ---- */
+  const lenF = S.F * SC;
+  const maxF = Math.max(0, 772 - cxB);
+  if(lenF > 1.2){
+    g += arr(cxB, cyB, cxB + Math.min(lenF, maxF), cyB, '#7c3aed', 'ah-Fb', 6);
+  }
+
+  /* ---- 力：f2（地面对 B，向左，作用在 B 重心） ---- */
+  const lenF2 = d.f2 * SC;
+  if(lenF2 > 1.2){
+    g += arr(cxB, cyB + 12, cxB - lenF2, cyB + 12, '#b45309', 'ah-f2b', 6);
+  }
+
+  /* ---- 力：f1（B 对 A，向右，作用在 A 重心） ---- */
+  const lenF1 = d.f1 * SC;
+  if(lenF1 > 1.2){
+    g += arr(cxA, cyA, cxA + lenF1, cyA, '#eab308', 'ah-f1b', 6);
+    g += arr(cxB, cyB - 12, cxB - lenF1, cyB - 12, '#eab308', 'ah-f1b', 6);   // f1′：A 对 B，向左（反作用）
+  }
+
+  /* ---- 速度矢量 ---- */
+  if(S.vA > 0.8){
+    const l = Math.min(S.vA * VS, 300);
+    g += arr(acx, YVA, acx + l, YVA, '#ea580c', 'ah-vb', 4.6);
+    g += lab(acx + l + 8, YVA+5, 'v'+sb('A')+' = ' + S.vA.toFixed(2) + ' m/s', '#c2410c', 13);
+  } else {
+    g += lab2(acx, YVA+5, 'v'+sb('A')+' = ' + S.vA.toFixed(2) + ' m/s', '#c2410c', 12.5, 'middle', true);
+  }
+  /* 木板 B 的速度：画在木板中部上方，随 B 一起右移 */
+  const vbx = Bleft + boardW*0.5;
+  if(S.vB > 0.8){
+    const l = Math.min(S.vB * VS, 788 - vbx);
+    g += arr(vbx, YVB, vbx + l, YVB, '#ea580c', 'ah-vb', 4.6);
+    g += lab(vbx + l/2, YVB-12, 'v'+sb('B')+' = ' + S.vB.toFixed(2) + ' m/s', '#c2410c', 13, 'middle');
+  } else {
+    g += lab2(vbx, YVB+5, 'v'+sb('B')+' = ' + S.vB.toFixed(2) + ' m/s', '#c2410c', 12.5, 'start', true);
+  }
+
+  sceneEl.innerHTML = g;
+  return d;
+}
+
+/* =========================================================
+   a–F 图像
+   ========================================================= */
+const chartEl = document.getElementById('chart');
+const AX = { x0:112, x1:962, y0:258, y1:44, Fmax:FMAX, amax:6.4 };
+const fx = F => AX.x0 + F * (AX.x1 - AX.x0) / AX.Fmax;
+const ay = a => AX.y0 - a * (AX.y0 - AX.y1) / AX.amax;
+
+function drawChartStatic(){
+  let g = '';
+  /* 阶段底色 */
+  g += '<rect x="'+fx(0)+'" y="'+AX.y1+'" width="'+(fx(FC1)-fx(0))+'" height="'+(AX.y0-AX.y1)+'" fill="#f1f5f9"/>';
+  g += '<rect x="'+fx(FC1)+'" y="'+AX.y1+'" width="'+(fx(FC2)-fx(FC1))+'" height="'+(AX.y0-AX.y1)+'" fill="#e3edfd"/>';
+  g += '<rect x="'+fx(FC2)+'" y="'+AX.y1+'" width="'+(fx(FMAX)-fx(FC2))+'" height="'+(AX.y0-AX.y1)+'" fill="#fdeee2"/>';
+
+  /* 网格与刻度 */
+  for(let F=0; F<=FMAX; F+=5){
+    g += '<line x1="'+fx(F)+'" y1="'+AX.y1+'" x2="'+fx(F)+'" y2="'+AX.y0+'" stroke="#dbe3ec" stroke-width="1"/>';
+  }
+  for(let a=0; a<=6; a+=1){
+    g += '<line x1="'+AX.x0+'" y1="'+ay(a)+'" x2="'+AX.x1+'" y2="'+ay(a)+'" stroke="#e7edf5" stroke-width="1"/>';
+    g += lab2(AX.x0-10, ay(a)+4.5, a.toFixed(0), '#64748b', 12.5, 'end');
+  }
+  const xt = [0,5,10,15,20,25,30];
+  xt.forEach(function(F){
+    g += '<line x1="'+fx(F)+'" y1="'+AX.y0+'" x2="'+fx(F)+'" y2="'+(AX.y0+6)+'" stroke="#94a3b8" stroke-width="1.6"/>';
+    g += lab2(fx(F), AX.y0+22, F, '#475569', 12.5, 'middle', true);
+  });
+  /* 坐标轴 */
+  g += '<line x1="'+AX.x0+'" y1="'+AX.y0+'" x2="'+AX.x1+'" y2="'+AX.y0+'" stroke="#9fb0c4" stroke-width="2"/>';
+  g += '<line x1="'+AX.x0+'" y1="'+AX.y0+'" x2="'+AX.x0+'" y2="'+AX.y1+'" stroke="#64748b" stroke-width="2"/>';
+  g += lab2(AX.x1+6, AX.y0+4, 'F/N', '#334155', 13.5, 'start', true);
+  g += lab2(AX.x0-12, AX.y1-14, 'a/(m·s⁻²)', '#334155', 13.5, 'end', true);
+
+  /* 临界竖虚线 */
+  g += '<line x1="'+fx(FC1)+'" y1="'+AX.y1+'" x2="'+fx(FC1)+'" y2="'+AX.y0+'" stroke="#2563eb" stroke-width="1.8" stroke-dasharray="5,4"/>';
+  g += '<line x1="'+fx(FC2)+'" y1="'+AX.y1+'" x2="'+fx(FC2)+'" y2="'+AX.y0+'" stroke="#ea580c" stroke-width="1.8" stroke-dasharray="5,4"/>';
+  g += lab2(fx(FC1)-7, AX.y1-16, 'F = 16 N 整体启动', '#2563eb', 12.5, 'end', true);
+  g += lab2(fx(FC2)+7, AX.y1-16, 'F = 24 N 开始相对滑动', '#ea580c', 12.5, 'start', true);
+
+  /* 曲线：共同段 0 →(FC1,0)→ (FC2, A_COMMON_END) */
+  g += '<polyline points="'+fx(0)+','+ay(0)+' '+fx(FC1)+','+ay(0)+' '+fx(FC2)+','+ay(A_COMMON_END)+'" fill="none" stroke="#334155" stroke-width="3.6" stroke-linejoin="round"/>';
+  /* 分叉：a_A 水平 = A_COMMON_END */
+  g += '<line x1="'+fx(FC2)+'" y1="'+ay(A_COMMON_END)+'" x2="'+fx(FMAX)+'" y2="'+ay(A_COMMON_END)+'" stroke="#2563eb" stroke-width="3.6"/>';
+  /* 分叉：a_B 斜率 M⁻¹ */
+  g += '<line x1="'+fx(FC2)+'" y1="'+ay(A_COMMON_END)+'" x2="'+fx(FMAX)+'" y2="'+ay(A_B_END)+'" stroke="#ea580c" stroke-width="3.6"/>';
+
+  g += lab2(fx(6)+2, ay(0)-14, 'a = 0（整体静止）', '#64748b', 12.5, 'start', true);
+  g += lab2(fx(FMAX)-4, ay(A_COMMON_END)+26, 'a'+sb('A')+' = 2 m/s²（锁定，与 F 无关）', '#1d4ed8', 13, 'end', true);
+  g += lab2(fx(FMAX)-4, ay(A_B_END)+20, 'a'+sb('B')+' = (F − 20)/2', '#c2410c', 13, 'end', true);
+  /* 阶段二共同段：标签置于该区域上方，避免与曲线相交 */
+  g += '<line x1="'+fx(20)+'" y1="'+(AX.y1+34)+'" x2="'+fx(19.9)+'" y2="'+(ay(1))+'" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="4,4"/>';
+  g += lab2(fx(20), AX.y1+26, 'a = (F − 16)/4', '#334155', 13, 'middle', true);
+
+  return g;
+}
+let chartStatic = '';
+function drawChartDynamic(){
+  const d = solve(S.F);
+  let g = '<g>';
+  g += '<line x1="'+fx(S.F)+'" y1="'+AX.y1+'" x2="'+fx(S.F)+'" y2="'+AX.y0+'" stroke="#7c3aed" stroke-width="2" stroke-dasharray="4,3"/>';
+  g += lab2(fx(S.F), AX.y0+40, 'F = ' + S.F.toFixed(1) + ' N', '#6d28d9', 13, 'middle', true);
+
+  g += '<circle cx="'+fx(S.F)+'" cy="'+ay(d.aA)+'" r="6.5" fill="#2563eb" stroke="#fff" stroke-width="2"/>';
+  if(d.aB - d.aA > 1e-6 || d.stage === 3){
+    g += '<circle cx="'+fx(S.F)+'" cy="'+ay(d.aB)+'" r="6.5" fill="#ea580c" stroke="#fff" stroke-width="2"/>';
+  }
+  if(d.stage === 3){
+    g += '<line x1="'+fx(S.F)+'" y1="'+ay(d.aA)+'" x2="'+fx(S.F)+'" y2="'+ay(d.aB)+'" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="3,3"/>';
+  }
+  /* 端点读数 */
+  g += lab(fx(S.F)+11, ay(d.aA)+4, 'a'+sb('A')+' = ' + d.aA.toFixed(2), '#1d4ed8', 13);
+  if(d.stage === 3){
+    g += lab(fx(S.F)+11, ay(d.aB)-8, 'a'+sb('B')+' = ' + d.aB.toFixed(2), '#c2410c', 13);
+  }
+  g += '</g>';
+  chartEl.innerHTML = chartStatic + g;
+}
+
+/* =========================================================
+   数据面板
+   ========================================================= */
+const el = id => document.getElementById(id);
+function updatePanel(d){
+  el('dF').textContent  = S.F.toFixed(1) + ' N';
+  el('daA').textContent = d.aA.toFixed(2) + ' m/s²';
+  el('daB').textContent = d.aB.toFixed(2) + ' m/s²';
+  el('df1').textContent = d.f1.toFixed(2) + ' N' + (d.stage===3 ? '（滑动，已达上限）' : (d.stage===2 ? '（静摩擦）' : ''));
+  el('df2').textContent = d.f2.toFixed(2) + ' N' + (d.f2static ? '（静摩擦）' : '（滑动摩擦）');
+  el('dvA').textContent = S.vA.toFixed(2) + ' m/s';
+  el('dvB').textContent = S.vB.toFixed(2) + ' m/s';
+  el('dds').textContent = Math.abs(S.xrel).toFixed(2) + ' m';
+  el('dt').textContent  = S.t.toFixed(2) + ' s';
+
+  const chip = el('chip');
+  chip.textContent = d.title;
+  chip.className = 'chip ' + (d.stage===1?'s1':(d.stage===2?'s2':'s3'));
+  el('chipDesc').textContent = d.desc;
+  el('Fshow').textContent = S.F.toFixed(1) + ' N';
+
+  if(S.capped){
+    el('hint').textContent = 'A 已滑到木板左端附近并被钳制显示（木板足够长，物理上不会滑出）。点“重置”可继续。';
+    el('hint').style.color = '#b91c1c';
+  } else if(S.nodePause){
+    const tag = (S.nodeAt <= FC1 + 1e-9) ? '整体启动临界' : 'A、B 相对滑动临界';
+    el('hint').textContent = '⏸ 已暂停于过程节点：F = ' + S.nodeAt.toFixed(0) + ' N（' + tag +
+                             '）。点“继续”或“演示”按钮接着往下播放。';
+    el('hint').style.color = '#7c3aed';
+  } else {
+    el('hint').style.color = '';
+    el('hint').textContent = d.stage===1
+      ? '此时地面给 B 的静摩擦 f₂ = F = ' + S.F.toFixed(1) + ' N，与拉力平衡，整体静止。'
+      : (d.stage===2
+        ? '整体一起加速：A 靠 B 给的静摩擦 f₁ = m·a = ' + d.f1.toFixed(2) + ' N 跟上（上限 4 N）。'
+        : 'A 的摩擦已达上限 μ₁mg = 4 N，a_A 锁定为 2 m/s²；B 的加速度随 F 线性增大。');
+  }
+}
+
+/* =========================================================
+   主循环
+   ========================================================= */
+let last = performance.now();
+function loop(now){
+  const dtReal = Math.min(0.05, (now - last) / 1000);
+  last = now;
+
+  if(S.playing){
+    const dt = dtReal * S.speed;
+    if(S.demo){
+      const oldF = S.F;
+      const newF = Math.min(FMAX, S.F + (FMAX / 8) * dt);   // 约 8 秒走完 0 → 30 N
+      // 扫描本帧是否跨过某个“过程节点”（临界点），是则精确停在该节点
+      let stopAt = null;
+      while(S.nodeIdx < NODES.length){
+        const nd = NODES[S.nodeIdx];
+        if(oldF < nd - 1e-9 && newF >= nd - 1e-9){ stopAt = nd; break; }
+        if(oldF >= nd - 1e-9){ S.nodeIdx++; }   // 已越过该节点，跳过
+        else { break; }
+      }
+      if(stopAt !== null){
+        S.F = stopAt; S.nodeIdx++;
+        S.playing = false; S.nodePause = true; S.nodeAt = stopAt;
+        el('Frange').value = stopAt.toFixed(1);
+        syncBtn();
+      } else {
+        S.F = newF;
+        el('Frange').value = S.F.toFixed(1);
+        if(S.F >= FMAX - 1e-6){ S.demo = false; S.playing = false; syncBtn(); }
+      }
+    }
+    const d = solve(S.F);
+    S.vA += d.aA * dt;
+    S.vB += d.aB * dt;
+    S.xB += S.vB * dt;
+    S.xrel += (S.vA - S.vB) * dt;
+    S.t  += dt;
+    if((A0 - BX0) + S.xrel * PXM < 12) S.capped = true;
+  }
+
+  const d = drawScene();
+  drawChartDynamic();
+  updatePanel(d);
+
+  requestAnimationFrame(loop);
+}
+
+/* =========================================================
+   交互
+   ========================================================= */
+const Frange = el('Frange');
+Frange.addEventListener('input', function(){
+  S.F = parseFloat(this.value);
+  S.demo = false; S.nodeIdx = 0; S.nodePause = false;
+  resetMotion();
+  if(!S.playing){ S.playing = true; syncBtn(); }
+});
+function syncBtn(){
+  el('btnPlay').textContent = S.playing ? '⏸ 暂停' : '▶ 继续';
+  el('btnDemo').textContent = S.demo ? '■ 停止演示' : '▶ 演示：F 由零增大（临界点自动停顿）';
+}
+el('btnPlay').addEventListener('click', function(){
+  S.playing = !S.playing;
+  if(!S.playing){ S.demo = false; S.nodePause = false; }
+  else { S.nodePause = false; }   // 继续：清除节点暂停标记，演示模式会接着走下一节点
+  syncBtn();
+});
+el('btnDemo').addEventListener('click', function(){
+  if(S.demo){ S.demo = false; S.playing = false; S.nodePause = false; }
+  else { S.demo = true; S.playing = true; S.F = 0; Frange.value = 0; S.nodeIdx = 0; S.nodePause = false; resetMotion(); }
+  syncBtn();
+});
+el('btnReset').addEventListener('click', function(){
+  S.F = 0; Frange.value = 0; S.demo = false; S.playing = false; S.nodeIdx = 0; S.nodePause = false;
+  resetMotion(); syncBtn();
+});
+document.querySelectorAll('.spd').forEach(function(b){
+  b.addEventListener('click', function(){
+    document.querySelectorAll('.spd').forEach(x => x.classList.remove('on'));
+    this.classList.add('on');
+    S.speed = parseFloat(this.dataset.s);
+  });
+});
+
+/* =========================================================
+   启动（必须在所有声明之后）
+   ========================================================= */
+chartStatic = drawChartStatic();
+syncBtn();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

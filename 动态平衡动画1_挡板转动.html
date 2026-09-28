@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>动态平衡动画一：挡板转动问题</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #eef2f7; margin: 0; padding: 18px; color: #2c3e50; }
+  .container { max-width: 1180px; margin: 0 auto; }
+  h1 { text-align: center; color: #1a3a5c; font-size: 22px; margin: 0 0 4px 0; }
+  .subtitle { text-align: center; color: #7f8c8d; font-size: 13px; margin-bottom: 16px; }
+  .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .panel { background: white; border-radius: 10px; padding: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+  .panel h3 { margin: 0 0 8px 0; color: #34495e; font-size: 15px; border-left: 3px solid #3498db; padding-left: 8px; }
+  canvas { display: block; margin: 0 auto; background: #fafbfc; border: 1px solid #e8ecef; border-radius: 6px; }
+  .controls { margin-top: 10px; background: #f8f9fb; padding: 10px; border-radius: 6px; }
+  .controls label { display: block; font-size: 13px; margin-bottom: 4px; color: #555; }
+  .controls .val { color: #e74c3c; font-weight: bold; font-size: 15px; }
+  input[type=range] { width: 100%; accent-color: #3498db; vertical-align: middle; }
+  .btn { background: #3498db; color: white; border: none; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; margin-top: 6px; }
+  .btn:hover { background: #2980b9; }
+  .info { margin-top: 10px; line-height: 1.7; font-size: 13px; }
+  .info p { margin: 6px 0; }
+  .formula { background: #f0f4f8; padding: 8px 12px; border-radius: 4px; font-family: "Cambria Math", "Times New Roman", serif; font-size: 14px; margin: 8px 0; }
+  .G { color: #555; font-weight: bold; }
+  .N1 { color: #e74c3c; font-weight: bold; }
+  .N2 { color: #2980b9; font-weight: bold; }
+  .result { background: #fef9e7; padding: 8px 12px; border-radius: 4px; border-left: 3px solid #f39c12; margin-top: 8px; font-size: 14px; }
+  ul { margin: 4px 0; padding-left: 22px; }
+  li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>动态平衡动画一：挡板转动问题</h1>
+  <div class="subtitle">图解法 · 三力动态平衡 · N₁ 先减后增（有极值）</div>
+  <div class="layout">
+    <div class="panel">
+      <h3>场景演示</h3>
+      <canvas id="scene" width="500" height="380"></canvas>
+      <div class="controls">
+        <label>挡板与水平方向夹角 β = <span class="val" id="betaVal">90</span>°</label>
+        <input type="range" id="beta" min="50" max="170" value="90" step="1">
+        <label style="margin-top:6px;">斜面倾角 α = 30°（固定）</label>
+        <button class="btn" id="playBtn">▶ 自动播放</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>力矢量闭合三角形</h3>
+      <canvas id="vector" width="500" height="380"></canvas>
+      <div class="info">
+        <p>三力 <span class="G">G</span>、<span class="N1">N₁</span>、<span class="N2">N₂</span> 构成闭合三角形。
+        <span class="G">G</span> 大小方向不变（竖直向下），<span class="N1">N₁</span> 方向随挡板转动而变化，<span class="N2">N₂</span> 方向始终垂直斜面。</p>
+      </div>
+    </div>
+  </div>
+  <div class="panel" style="margin-top: 14px;">
+    <h3>力的变化曲线</h3>
+    <canvas id="chart" width="1100" height="270"></canvas>
+  </div>
+  <div class="panel" style="margin-top: 14px;">
+    <h3>解析与结论</h3>
+    <div class="info">
+      <p>球受三力平衡：<span class="G">重力 G = mg</span>（竖直向下），<span class="N1">挡板弹力 N₁（垂直挡板）</span>，<span class="N2">斜面弹力 N₂（垂直斜面）</span>。</p>
+      <div class="formula">
+        N₁ = mg · sin α / sin(β − α) &nbsp;&nbsp;|&nbsp;&nbsp; N₂ = mg · sin β / sin(β − α)
+      </div>
+      <ul>
+        <li><span class="N2">N₂ 单调减小</span>：β 从 α⁺ 增到 180°，N₂ 从 +∞ 减到 0</li>
+        <li><span class="N1">N₁ 先减后增</span>：当 β = α + 90° = 120° 时，N₁ 取最小值 = mg · sin α = 0.5 mg</li>
+        <li>图解法要点：G 不变，N₂ 方向不变，N₁ 方向随挡板转动 —— N₁ 端点轨迹为一条平行于 N₂ 方向的直线</li>
+      </ul>
+      <div class="result">
+        当前状态：β = <span id="curBeta">90</span>°，<span class="N1">N₁ = <span id="n1val">0.58</span> mg</span>，<span class="N2">N₂ = <span id="n2val">1.15</span> mg</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const alpha = 30 * Math.PI / 180;
+const canvasScene = document.getElementById('scene');
+const canvasVector = document.getElementById('vector');
+const canvasChart = document.getElementById('chart');
+const ctxS = canvasScene.getContext('2d');
+const ctxV = canvasVector.getContext('2d');
+const ctxC = canvasChart.getContext('2d');
+
+function getForces(betaRad) {
+  const s = Math.sin(betaRad - alpha);
+  if (Math.abs(s) < 0.01) return { N1: 999, N2: 999 };
+  return { N1: Math.sin(alpha) / s, N2: Math.sin(betaRad) / s };
+}
+
+function getBallPos(betaRad, r) {
+  const s = Math.sin(betaRad - alpha);
+  return {
+    x: r * (Math.cos(alpha) + Math.cos(betaRad)) / s,
+    y: r * (Math.sin(alpha) + Math.sin(betaRad)) / s
+  };
+}
+
+function drawArrow(ctx, x1, y1, x2, y2, color, label, labelOffset) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const len = Math.sqrt(dx*dx + dy*dy);
+  if (len < 2) return;
+  const ux = dx/len, uy = dy/len;
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2 - ux*8, y2 - uy*8);
+  ctx.stroke();
+  const ah = 11, aw = 6;
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - ah*ux + aw*uy, y2 - ah*uy - aw*ux);
+  ctx.lineTo(x2 - ah*ux - aw*uy, y2 - ah*uy + aw*ux);
+  ctx.closePath();
+  ctx.fill();
+  if (label) {
+    const off = labelOffset || 10;
+    ctx.fillStyle = color;
+    ctx.font = 'bold 13px Microsoft YaHei';
+    ctx.fillText(label, x2 + ux*off - 6, y2 + uy*off + 4);
+  }
+}
+
+function drawScene(betaRad) {
+  const ctx = ctxS;
+  const W = canvasScene.width, H = canvasScene.height;
+  ctx.clearRect(0, 0, W, H);
+  const Ox = 220, Oy = 330;
+  const scale = 70;
+  const r = 0.5;
+  // 地面
+  ctx.strokeStyle = '#aaa';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, Oy);
+  ctx.lineTo(W, Oy);
+  ctx.stroke();
+  ctx.strokeStyle = '#ccc';
+  for (let i = 0; i < W; i += 14) {
+    ctx.beginPath();
+    ctx.moveTo(i, Oy);
+    ctx.lineTo(i - 8, Oy + 8);
+    ctx.stroke();
+  }
+  // 斜面
+  const slopeLen = 3.5;
+  ctx.fillStyle = '#e8eef3';
+  ctx.beginPath();
+  ctx.moveTo(Ox, Oy);
+  ctx.lineTo(Ox + slopeLen * scale * Math.cos(alpha), Oy - slopeLen * scale * Math.sin(alpha));
+  ctx.lineTo(Ox + slopeLen * scale * Math.cos(alpha), Oy);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#2c3e50';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(Ox, Oy);
+  ctx.lineTo(Ox + slopeLen * scale * Math.cos(alpha), Oy - slopeLen * scale * Math.sin(alpha));
+  ctx.stroke();
+  // 挡板
+  const Llen = 3;
+  ctx.strokeStyle = '#c0392b';
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(Ox, Oy);
+  ctx.lineTo(Ox + Llen * scale * Math.cos(betaRad), Oy - Llen * scale * Math.sin(betaRad));
+  ctx.stroke();
+  // O点
+  ctx.fillStyle = '#2c3e50';
+  ctx.beginPath();
+  ctx.arc(Ox, Oy, 4, 0, 2*Math.PI);
+  ctx.fill();
+  // 球
+  const bp = getBallPos(betaRad, r);
+  const bx = Ox + bp.x * scale;
+  const by = Oy - bp.y * scale;
+  const br = r * scale;
+  ctx.fillStyle = 'rgba(0,0,0,0.08)';
+  ctx.beginPath();
+  ctx.ellipse(bx, Oy, br*0.9, br*0.2, 0, 0, 2*Math.PI);
+  ctx.fill();
+  const grad = ctx.createRadialGradient(bx - br*0.3, by - br*0.3, 2, bx, by, br);
+  grad.addColorStop(0, '#85c1e9');
+  grad.addColorStop(1, '#3498db');
+  ctx.fillStyle = grad;
+  ctx.strokeStyle = '#1f618d';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(bx, by, br, 0, 2*Math.PI);
+  ctx.fill();
+  ctx.stroke();
+  // 力矢量
+  const f = getForces(betaRad);
+  const fScale = 40;
+  drawArrow(ctx, bx, by, bx, by + fScale, '#555', 'G', 12);
+  const n1x = Math.sin(betaRad);
+  const n1y_phys = -Math.cos(betaRad);
+  const n1Len = Math.min(f.N1, 4) * fScale;
+  drawArrow(ctx, bx, by, bx + n1Len * n1x, by - n1Len * n1y_phys, '#e74c3c', 'N₁', 12);
+  const n2x = -Math.sin(alpha);
+  const n2y_phys = Math.cos(alpha);
+  const n2Len = Math.min(f.N2, 4) * fScale;
+  drawArrow(ctx, bx, by, bx + n2Len * n2x, by - n2Len * n2y_phys, '#2980b9', 'N₂', 12);
+  // 角度
+  ctx.fillStyle = '#2c3e50';
+  ctx.font = '12px Microsoft YaHei';
+  ctx.fillText('α=30°', Ox + 55, Oy - 12);
+  ctx.strokeStyle = '#c0392b';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(Ox, Oy, 30, 0, -betaRad, true);
+  ctx.stroke();
+  ctx.fillStyle = '#c0392b';
+  ctx.fillText('β', Ox + 35, Oy - 25);
+  // 说明
+  ctx.fillStyle = '#7f8c8d';
+  ctx.font = '11px Microsoft YaHei';
+  ctx.fillText('挡板绕O点缓慢转动，球始终处于平衡状态', 10, 15);
+}
+
+function drawVector(betaRad) {
+  const ctx = ctxV;
+  const W = canvasVector.width, H = canvasVector.height;
+  ctx.clearRect(0, 0, W, H);
+  const f = getForces(betaRad);
+  const scale = 40;
+  const Gsx = 200, Gsy = 70;
+  const Gex = Gsx, Gey = Gsy + scale;
+  const n2x = -Math.sin(alpha);
+  const n2y_phys = Math.cos(alpha);
+  const N2len = Math.min(f.N2, 4) * scale;
+  const N2x = Gsx + N2len * n2x;
+  const N2y = Gsy - N2len * n2y_phys;
+  const n1x = Math.sin(betaRad);
+  const n1y_phys = -Math.cos(betaRad);
+  const N1len = Math.min(f.N1, 4) * scale;
+  const N1x = Gex + N1len * n1x;
+  const N1y = Gey - N1len * n1y_phys;
+  // 虚线辅助
+  ctx.strokeStyle = '#bbb';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(Gsx, Gsy);
+  ctx.lineTo(Gsx + 250 * n2x, Gsy - 250 * n2y_phys);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(Gex, Gey);
+  ctx.lineTo(Gex + 250 * n1x, Gey - 250 * n1y_phys);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  // 力矢量
+  drawArrow(ctx, Gsx, Gsy, Gex, Gey, '#555', 'G', 12);
+  drawArrow(ctx, Gsx, Gsy, N2x, N2y, '#2980b9', 'N₂', 12);
+  drawArrow(ctx, Gex, Gey, N1x, N1y, '#e74c3c', 'N₁', 12);
+  // 闭合边
+  ctx.strokeStyle = '#888';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([2, 3]);
+  ctx.beginPath();
+  ctx.moveTo(N1x, N1y);
+  ctx.lineTo(N2x, N2y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  // 标注
+  ctx.fillStyle = '#7f8c8d';
+  ctx.font = '11px Microsoft YaHei';
+  ctx.fillText('N₂方向（⊥斜面，固定）', Gsx - 160, Gsy + 50);
+  ctx.fillText('N₁方向（⊥挡板，随β变）', Gex + 30, Gey + 60);
+  ctx.fillText('G（竖直，固定）', Gsx + 8, Gsy + 50);
+  ctx.fillStyle = '#7f8c8d';
+  ctx.font = '11px Microsoft YaHei';
+  ctx.fillText('三力构成闭合三角形（N₁端点沿平行于N₂方向的直线移动）', 10, 15);
+}
+
+function drawChart(betaRad) {
+  const ctx = ctxC;
+  const W = canvasChart.width, H = canvasChart.height;
+  ctx.clearRect(0, 0, W, H);
+  const padL = 50, padR = 160, padT = 18, padB = 38;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const betaMin = 35, betaMax = 175;
+  const maxY = 3;
+  // 网格
+  ctx.strokeStyle = '#eee';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 3; i++) {
+    const y = padT + plotH - i * plotH / 3;
+    ctx.beginPath();
+    ctx.moveTo(padL, y);
+    ctx.lineTo(padL + plotW, y);
+    ctx.stroke();
+    ctx.fillStyle = '#888';
+    ctx.font = '11px Microsoft YaHei';
+    ctx.fillText(i.toString(), padL - 18, y + 4);
+  }
+  for (let b = 30; b <= 180; b += 15) {
+    const x = padL + (b - betaMin) / (betaMax - betaMin) * plotW;
+    if (x < padL - 1 || x > padL + plotW + 1) continue;
+    ctx.beginPath();
+    ctx.moveTo(x, padT);
+    ctx.lineTo(x, padT + plotH);
+    ctx.stroke();
+    ctx.fillStyle = '#888';
+    ctx.fillText(b + '°', x - 12, padT + plotH + 15);
+  }
+  // 轴
+  ctx.strokeStyle = '#555';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(padL, padT);
+  ctx.lineTo(padL, padT + plotH);
+  ctx.lineTo(padL + plotW, padT + plotH);
+  ctx.stroke();
+  ctx.fillStyle = '#555';
+  ctx.font = '12px Microsoft YaHei';
+  ctx.fillText('β / °', padL + plotW - 30, padT + plotH + 32);
+  ctx.save();
+  ctx.translate(15, padT + plotH/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText('力的大小 / mg', -45, 0);
+  ctx.restore();
+  // 曲线
+  function drawCurve(color, getter) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    let started = false;
+    for (let b = betaMin + 1; b <= betaMax - 1; b += 0.5) {
+      const v = getter(b * Math.PI / 180);
+      const x = padL + (b - betaMin) / (betaMax - betaMin) * plotW;
+      const y = padT + plotH - Math.min(v, maxY) / maxY * plotH;
+      if (v > maxY) {
+        if (started) { ctx.stroke(); started = false; }
+        ctx.beginPath();
+      } else {
+        if (!started) { ctx.moveTo(x, y); started = true; }
+        else ctx.lineTo(x, y);
+      }
+    }
+    if (started) ctx.stroke();
+  }
+  drawCurve('#e74c3c', b => getForces(b).N1);
+  drawCurve('#2980b9', b => getForces(b).N2);
+  // 极值点
+  const optB = 120;
+  const optN1 = getForces(optB * Math.PI/180).N1;
+  const optX = padL + (optB - betaMin) / (betaMax - betaMin) * plotW;
+  const optY = padT + plotH - optN1 / maxY * plotH;
+  ctx.fillStyle = '#e74c3c';
+  ctx.beginPath();
+  ctx.arc(optX, optY, 5, 0, 2*Math.PI);
+  ctx.fill();
+  ctx.strokeStyle = 'white';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.fillStyle = '#c0392b';
+  ctx.font = 'bold 11px Microsoft YaHei';
+  ctx.fillText('极小值: β=120°, N₁=0.5mg', optX + 8, optY - 6);
+  // 当前β
+  const curB = betaRad * 180 / Math.PI;
+  const curX = padL + (curB - betaMin) / (betaMax - betaMin) * plotW;
+  ctx.strokeStyle = '#7f8c8d';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  ctx.moveTo(curX, padT);
+  ctx.lineTo(curX, padT + plotH);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  const f = getForces(betaRad);
+  [['#e74c3c', f.N1], ['#2980b9', f.N2]].forEach(([c, v]) => {
+    const y = padT + plotH - Math.min(v, maxY) / maxY * plotH;
+    ctx.fillStyle = c;
+    ctx.beginPath();
+    ctx.arc(curX, y, 5, 0, 2*Math.PI);
+    ctx.fill();
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  });
+  // 图例
+  const lgX = padL + plotW + 18;
+  ctx.fillStyle = '#e74c3c';
+  ctx.fillRect(lgX, padT + 10, 18, 3);
+  ctx.fillStyle = '#333';
+  ctx.font = '12px Microsoft YaHei';
+  ctx.fillText('N₁ 挡板弹力', lgX + 24, padT + 15);
+  ctx.fillStyle = '#2980b9';
+  ctx.fillRect(lgX, padT + 32, 18, 3);
+  ctx.fillStyle = '#333';
+  ctx.fillText('N₂ 斜面弹力', lgX + 24, padT + 37);
+  ctx.fillStyle = '#7f8c8d';
+  ctx.fillText('● 极值点', lgX, padT + 60);
+  ctx.fillText('● 当前位置', lgX, padT + 80);
+}
+
+let playing = false;
+let playDir = 1;
+
+function update() {
+  const beta = parseFloat(document.getElementById('beta').value);
+  const betaRad = beta * Math.PI / 180;
+  document.getElementById('betaVal').textContent = beta;
+  document.getElementById('curBeta').textContent = beta;
+  const f = getForces(betaRad);
+  document.getElementById('n1val').textContent = f.N1.toFixed(2);
+  document.getElementById('n2val').textContent = f.N2.toFixed(2);
+  drawScene(betaRad);
+  drawVector(betaRad);
+  drawChart(betaRad);
+}
+
+document.getElementById('beta').addEventListener('input', update);
+
+document.getElementById('playBtn').addEventListener('click', function() {
+  playing = !playing;
+  this.textContent = playing ? '⏸ 暂停' : '▶ 自动播放';
+  if (playing) animate();
+});
+
+function animate() {
+  if (!playing) return;
+  const slider = document.getElementById('beta');
+  let v = parseFloat(slider.value) + playDir * 0.8;
+  if (v >= 170) { v = 170; playDir = -1; }
+  if (v <= 50) { v = 50; playDir = 1; }
+  slider.value = v;
+  update();
+  requestAnimationFrame(animate);
+}
+
+update();
+</script>
+</body>
+</html>

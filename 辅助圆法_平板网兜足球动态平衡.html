@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>辅助圆法 · 平板OA转动中的足球动态平衡（θ=30°恒定）</title>
+<style>
+  :root{
+    --red:#E53935;      /* 重力 G */
+    --blue:#1E88E5;     /* 板弹力 F_N */
+    --orange:#FB8C00;   /* 绳拉力 F_T */
+    --ink:#263238;
+    --paper:#FBF9F4;
+    --line:#BDBDBD;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:"Microsoft YaHei","PingFang SC",sans-serif;
+    font-size:14px; line-height:1.6;
+  }
+  .wrap{max-width:1180px; margin:0 auto; padding:18px 16px 40px;}
+  h1{font-size:20px; margin:6px 0 2px; letter-spacing:1px;}
+  .sub{color:#607D8B; font-size:13px; margin-bottom:12px;}
+  .legend{display:flex; gap:18px; flex-wrap:wrap; align-items:center;
+    background:#fff; border:1px solid #eee; border-radius:10px; padding:10px 14px; margin-bottom:14px;}
+  .chip{display:flex; align-items:center; gap:7px; font-size:13px;}
+  .sw{width:22px; height:8px; border-radius:4px;}
+  .sw.r{background:var(--red);} .sw.b{background:var(--blue);} .sw.o{background:var(--orange);}
+  .stage{display:flex; gap:14px; flex-wrap:wrap;}
+  .panel{background:#fff; border:1px solid #eee; border-radius:12px; padding:10px;
+    box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  .panel h2{font-size:14px; margin:2px 0 6px; color:#455A64; font-weight:600;}
+  canvas{display:block; background:#fff; border-radius:8px;}
+  .graphwrap{margin-top:14px;}
+  .controls{display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    background:#fff; border:1px solid #eee; border-radius:10px; padding:12px 14px; margin:14px 0;}
+  button{font-family:inherit; font-size:13px; border:1px solid #CFD8DC; background:#F5F7FA;
+    color:var(--ink); border-radius:8px; padding:6px 12px; cursor:pointer;}
+  button:hover{background:#ECEFF1;}
+  button.primary{background:var(--ink); color:#fff; border-color:var(--ink);}
+  input[type=range]{accent-color:var(--blue); width:240px;}
+  .kv{font-variant-numeric:tabular-nums; font-size:13px; color:#455A64;}
+  .kv b{color:var(--ink);}
+  .opts{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:10px; margin-top:6px;}
+  .opt{background:#fff; border:1px solid #eee; border-left:4px solid #ccc; border-radius:8px; padding:8px 12px; font-size:13px;}
+  .opt.ok{border-left-color:#2E7D32;}
+  .opt.no{border-left-color:#C62828;}
+  .opt .tag{font-weight:700; margin-right:6px;}
+  .opt.ok .tag{color:#2E7D32;} .opt.no .tag{color:#C62828;}
+  .opts .title{font-weight:700; margin-bottom:8px; font-size:14px; grid-column:1/-1;}
+  details{margin-top:16px; background:#fff; border:1px solid #eee; border-radius:10px; padding:12px 16px;}
+  summary{cursor:pointer; font-weight:700; color:#37474F;}
+  details p, details li{font-size:13.5px;}
+  .math{font-family:"Cambria Math","Times New Roman",serif; font-style:italic;}
+  code{background:#F0F4F8; padding:1px 5px; border-radius:4px; font-size:12.5px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>辅助圆法 · 平板OA转动中的足球动态平衡</h1>
+  <div class="sub">轻绳与板夹角 θ = 30° 恒定，板 OA 由水平缓慢逆时针转至竖直。力矢量仅以颜色与长度表达大小。</div>
+
+  <div class="legend">
+    <div class="chip"><span class="sw r"></span>重力 G = 12 N（恒定·竖直向下）</div>
+    <div class="chip"><span class="sw b"></span>板对球弹力 F<sub>N</sub>（⊥OA，随板转）</div>
+    <div class="chip"><span class="sw o"></span>绳对球拉力 F<sub>T</sub>（沿绳指向 A）</div>
+    <div class="chip" style="color:#757575"><span class="sw" style="background:#9E9E9E"></span>辅助圆（弦=重力 G，圆周角 60°）</div>
+  </div>
+
+  <div class="stage">
+    <div class="panel">
+      <h2>① 物理情景（球随板转动，θ 恒定）</h2>
+      <canvas id="scene" width="500" height="520"></canvas>
+    </div>
+    <div class="panel">
+      <h2>② 力矢量三角形 + 辅助圆</h2>
+      <canvas id="diagram" width="500" height="430"></canvas>
+    </div>
+  </div>
+
+  <div class="graphwrap panel">
+    <h2>③ F<sub>N</sub> 与 F<sub>T</sub> 随 α 的变化（α：板与水平夹角）</h2>
+    <canvas id="graph" width="1060" height="220"></canvas>
+  </div>
+
+  <div class="controls">
+    <button id="play" class="primary">⏸ 暂停</button>
+    <button data-a="0">α=0°</button>
+    <button data-a="30">α=30°</button>
+    <button data-a="60">α=60°</button>
+    <button data-a="90">α=90°</button>
+    <label style="display:flex;align-items:center;gap:8px;margin-left:auto;">
+      <input type="checkbox" id="showCircle" checked> 显示辅助圆
+    </label>
+  </div>
+  <div class="controls" style="margin-top:-6px;">
+    <span class="kv">板转角 α：<b id="aVal">0</b>°</span>
+    <input type="range" id="slider" min="0" max="90" value="0" step="0.5">
+    <span class="kv">F<sub>N</sub>=<b id="fnVal">12.00</b> N</span>
+    <span class="kv">F<sub>T</sub>=<b id="ftVal">0.00</b> N</span>
+    <span class="kv">两力夹角=<b>120°</b>（恒定）</span>
+  </div>
+
+  <div class="opts">
+    <div class="title">选项判定（答案：A、D）</div>
+    <div class="opt ok"><span class="tag">A 正确</span>F<sub>N</sub> 最小值为 4√3 N（≈6.93 N），出现在板竖直（α=90°）时。</div>
+    <div class="opt no"><span class="tag">B 错误</span>α=30° 时 F<sub>N</sub>=8√3 N、F<sub>T</sub>=4√3 N，二者并不相等；F<sub>N</sub>=F<sub>T</sub> 发生在 α=60°（均为 12 N）。</div>
+    <div class="opt no"><span class="tag">C 错误</span>F<sub>N</sub>=2F<sub>T</sub> 可以取到，恰好在 α=30°（8√3 = 2×4√3）。</div>
+    <div class="opt ok"><span class="tag">D 正确</span>F<sub>T</sub> 最大值为 8√3 N（≈13.86 N），出现在板竖直（α=90°）时。</div>
+  </div>
+
+  <details>
+    <summary>模型抽象与辅助圆法推导</summary>
+    <p><b>1. 受力模型（球）</b>：球受三力处于动态平衡——重力 <span class="math">G</span>（12 N，竖直向下，恒定）；板对球的弹力 <span class="math">F<sub>N</sub></span>（始终垂直于板 OA）；绳对球的拉力 <span class="math">F<sub>T</sub></span>（沿绳指向 A，与板夹角恒为 θ=30°）。</p>
+    <p><b>2. 核心不变量</b>：板转动时 <span class="math">F<sub>N</sub></span> 与 <span class="math">F<sub>T</sub></span> 的方向都随时间旋转，但二者夹角恒为 <span class="math">90°+θ = 120°</span> 不变。这正是"一恒两转、夹角不变"型动态平衡。</p>
+    <p><b>3. 辅助圆</b>：把三力首尾相接成矢量三角形。重力 <span class="math">G</span> 是固定边（弦），顶点（<span class="math">F<sub>N</sub></span> 与 <span class="math">F<sub>T</sub></span> 的交点）对弦 <span class="math">G</span> 所张的角 = 180°−120° = <b>60°</b>（恒定）。因此该顶点轨迹是一段圆弧——以 <span class="math">G</span> 为弦、圆周角 60° 的<b>辅助圆</b>。圆半径为
+      <span class="math">R = G/(2·sin60°) = 12/√3 = 4√3</span> N。</p>
+    <p><b>4. 解析关系</b>（取沿板、垂直板分解）：
+      沿板方向 <span class="math">F<sub>T</sub>cosθ = G·sinα</span> ⟹ <span class="math">F<sub>T</sub> = G·sinα/cosθ</span>；
+      垂直板方向 <span class="math">F<sub>N</sub> = G·cosα + F<sub>T</sub>sinθ</span> ⟹ <span class="math">F<sub>N</sub> = G·cos(α−θ)/cosθ</span>。
+      代入 θ=30°、G=12 N 得：<span class="math">F<sub>T</sub> = 12·sinα/(√3/2)</span>，<span class="math">F<sub>N</sub> = 12·cos(α−30°)/(√3/2)</span>。</p>
+    <p><b>5. 关键点</b>：α=30° 时绳恰好水平，<span class="math">F<sub>N</sub>=8√3</span>（最大）、<span class="math">F<sub>T</sub>=4√3</span>（=F<sub>N</sub>/2）；α=60° 时 <span class="math">F<sub>N</sub>=F<sub>T</sub>=12</span> N；α=90° 时 <span class="math">F<sub>N</sub>=4√3</span>（最小）、<span class="math">F<sub>T</sub>=8√3</span>（最大）。据此判定 A、D 正确，B、C 错误。</p>
+    <p style="color:#607D8B">注：α=0° 时 F<sub>T</sub>=0（绳恰拉直而无张力），球仅靠板支撑；随板转动绳张力逐渐增大，几何上球被绳"锁"在板上使 θ 保持 30°。</p>
+  </details>
+</div>
+
+<script>
+"use strict";
+const DEG = Math.PI/180;
+const G = 12;            // N
+const TH = 30*DEG;       // θ
+const cosTH = Math.cos(TH);
+
+// 力的大小（N）
+function FN(a){ return G*Math.cos(a-TH)/cosTH; }
+function FT(a){ return G*Math.sin(a)/cosTH; }
+
+let alpha = 0*DEG;       // 当前板角
+let playing = true;
+let last = performance.now();
+
+// ---------- 画箭头 ----------
+function arrow(ctx,x1,y1,x2,y2,color,w){
+  const dx=x2-x1, dy=y2-y1, L=Math.hypot(dx,dy);
+  if(L<0.5){ return; }
+  ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=w;
+  ctx.lineCap="round";
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  const ux=dx/L, uy=dy/L, hs=Math.min(13,L*0.32);
+  const bx=x2-ux*hs, by=y2-uy*hs, px=-uy, py=ux;
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(bx+px*hs*0.5, by+py*hs*0.5);
+  ctx.lineTo(bx-px*hs*0.5, by-py*hs*0.5);
+  ctx.closePath(); ctx.fill();
+}
+
+// ================= 场景面板 =================
+const scene = document.getElementById('scene');
+const sctx = scene.getContext('2d');
+const SW = scene.width, SH = scene.height;
+
+// 板坐标系常数（场景，屏幕坐标 y 向下）
+const Ox = 150, Oy = 440;     // 铰链 O
+const D = 330;                // 板长 OA
+const Lc = 185, r = 48;       // 球心沿板位置 & 半径
+const Sf = 9.5;               // 力比例尺 px/N
+
+// 板坐标系下的绳网兜汇聚点（相对 O：x沿板,y沿法线）已解出
+// A_b=(D,0), 解出 P_b
+function ropePointBoard(){
+  // 解 |A + t*d - C|^2 = r^2 , d=(-cos30, sin30)
+  const Ax=D, Ay=0, Cx=Lc, Cy=r;
+  const dx=-Math.cos(TH), dy=Math.sin(TH);
+  const Bx=Ax-Cx, By=Ay-Cy;            // A-C
+  const b2 = 2*(dx*Bx+dy*By);          // t^2 + b2 t + c = 0
+  const c  = (Bx*Bx+By*By) - r*r;
+  const t = (-b2 - Math.sqrt(b2*b2 - 4*c))/2; // 近端交点
+  return {x:Ax+dx*t, y:Ay+dy*t, t};
+}
+
+function drawScene(){
+  sctx.clearRect(0,0,SW,SH);
+  const a = alpha;
+  const u = [Math.cos(a), -Math.sin(a)];   // 板方向（向右上）
+  const n = [-Math.sin(a), -Math.cos(a)];  // 板上表面外法线（左上方）
+  const O=[Ox,Oy];
+  const A=[Ox+D*u[0], Oy+D*u[1]];
+  const C=[Ox+Lc*u[0]+r*n[0], Oy+Lc*u[1]+r*n[1]];
+  const Pb = ropePointBoard();
+  const P=[Ox+Pb.x*u[0]+Pb.y*n[0], Oy+Pb.x*u[1]+Pb.y*n[1]];
+
+  // 地面与支座
+  sctx.fillStyle="#BDBDBD";
+  sctx.fillRect(Ox-95, Oy+0, 175, 26);
+  sctx.fillStyle="#90A4AE";
+  sctx.fillRect(Ox-7, Oy, 14, 62);
+  // 角度弧
+  sctx.strokeStyle="#90A4AE"; sctx.lineWidth=1.5;
+  sctx.beginPath(); sctx.arc(Ox, Oy, 42, 0, -a, true); sctx.stroke();
+  sctx.fillStyle="#607D8B"; sctx.font="13px sans-serif";
+  sctx.fillText("α="+Math.round(a/DEG)+"°", Ox+50, Oy+8);
+
+  // 板
+  sctx.strokeStyle="#37474F"; sctx.lineWidth=9; sctx.lineCap="round";
+  sctx.beginPath(); sctx.moveTo(O[0],O[1]); sctx.lineTo(A[0],A[1]); sctx.stroke();
+  sctx.fillStyle="#37474F";
+  sctx.beginPath(); sctx.arc(O[0],O[1],6,0,7); sctx.fill();
+  sctx.beginPath(); sctx.arc(A[0],A[1],5,0,7); sctx.fill();
+  sctx.fillStyle="#607D8B"; sctx.font="12px sans-serif";
+  sctx.fillText("O", O[0]-22, O[1]+4);
+  sctx.fillText("A", A[0]+8, A[1]-4);
+
+  // 绳（A→P）
+  sctx.strokeStyle="#6D4C41"; sctx.lineWidth=2.5;
+  sctx.beginPath(); sctx.moveTo(A[0],A[1]); sctx.lineTo(P[0],P[1]); sctx.stroke();
+
+  // 球 + 网兜
+  sctx.fillStyle="#FFCC80";
+  sctx.beginPath(); sctx.arc(C[0],C[1],r,0,7); sctx.fill();
+  sctx.strokeStyle="#FB8C00"; sctx.lineWidth=1.5;
+  sctx.beginPath(); sctx.arc(C[0],C[1],r,0,7); sctx.stroke();
+  // 网兜：从汇聚点向球面几条线
+  sctx.strokeStyle="#8D6E63"; sctx.lineWidth=1.2;
+  for(let k=0;k<7;k++){
+    const ang = (-10 + k*30)*DEG;
+    sctx.beginPath(); sctx.moveTo(P[0],P[1]);
+    sctx.lineTo(C[0]+r*Math.cos(ang), C[1]+r*Math.sin(ang)); sctx.stroke();
+  }
+  sctx.strokeStyle="#BCAAA4"; sctx.lineWidth=1;
+  sctx.beginPath(); sctx.arc(C[0],C[1],r*0.62,0,7); sctx.stroke();
+
+  // 力矢量（颜色+长度，无文字标签）
+  const fN=FN(a), fT=FT(a);
+  // 重力：从球心向下
+  arrow(sctx, C[0],C[1], C[0], C[1]+G*Sf, getCss('--red'), 4);
+  // 弹力：沿外法线
+  arrow(sctx, C[0],C[1], C[0]+n[0]*fN*Sf, C[1]+n[1]*fN*Sf, getCss('--blue'), 4);
+  // 拉力：沿绳指向 A（P→A 方向）
+  let tx=A[0]-P[0], ty=A[1]-P[1]; const tl=Math.hypot(tx,ty);
+  tx/=tl; ty/=tl;
+  arrow(sctx, C[0],C[1], C[0]+tx*fT*Sf, C[1]+ty*fT*Sf, getCss('--orange'), 4);
+}
+
+// ================= 辅助圆面板 =================
+const diagram = document.getElementById('diagram');
+const dctx = diagram.getContext('2d');
+const DW = diagram.width, DH = diagram.height;
+const ds = 23;                 // px/N
+const odx = 360, ody = 92;     // 物理原点 S=(0,0) 的屏幕位置
+function DtoS(x,y){ return [odx + x*ds, ody - y*ds]; }  // 物理 y 向上
+
+function drawDiagram(){
+  dctx.clearRect(0,0,DW,DH);
+  const a=alpha;
+  const fN=FN(a);
+  // 物理坐标：S(0,0), P(0,-12), Q = P + fN*(-sin a, cos a)
+  const S=[0,0], Pp=[0,-12];
+  const Q=[ -fN*Math.sin(a), -12 + fN*Math.cos(a) ];
+
+  const Ss=DtoS(S[0],S[1]);
+  const Ps=DtoS(Pp[0],Pp[1]);
+  const Qs=DtoS(Q[0],Q[1]);
+
+  // 辅助圆（过 S,P，圆心(-2√3,-6)，半径 4√3）
+  const R = 4*Math.sqrt(3)*ds;
+  const Cc = DtoS(-2*Math.sqrt(3), -6);
+  if(document.getElementById('showCircle').checked){
+    dctx.setLineDash([5,5]); dctx.strokeStyle="#9E9E9E"; dctx.lineWidth=1.4;
+    dctx.beginPath(); dctx.arc(Cc[0],Cc[1],R,0,7); dctx.stroke();
+    dctx.setLineDash([]);
+    dctx.fillStyle="#757575"; dctx.font="12px sans-serif";
+    dctx.fillText("辅助圆  R=4√3 N", Cc[0]-R+6, Cc[1]+4);
+    // 圆周角 60° 标注（在 Q 附近，弦 SP 所张）
+    dctx.strokeStyle="#B0BEC5"; dctx.lineWidth=1;
+    const ar=34;
+    dctx.beginPath();
+    // 从 Q 看 S 与 P 的夹角
+    const a1=Math.atan2(Ss[1]-Qs[1], Ss[0]-Qs[0]);
+    const a2=Math.atan2(Ps[1]-Qs[1], Ps[0]-Qs[0]);
+    dctx.arc(Qs[0],Qs[1],ar, a1, a2, (a2-a1)<Math.PI?false:true);
+    dctx.stroke();
+    dctx.fillStyle="#607D8B";
+    dctx.fillText("60°", Qs[0]+8, Qs[1]-ar+4);
+  }
+
+  // 弦 G（重力矢量，红，S→P）
+  arrow(dctx, Ss[0],Ss[1], Ps[0],Ps[1], getCss('--red'), 4);
+  // F_N：P→Q（蓝）
+  arrow(dctx, Ps[0],Ps[1], Qs[0],Qs[1], getCss('--blue'), 4);
+  // F_T：Q→S（橙）
+  arrow(dctx, Qs[0],Qs[1], Ss[0],Ss[1], getCss('--orange'), 4);
+
+  // 点
+  dctx.fillStyle="#263238";
+  dctx.beginPath(); dctx.arc(Ss[0],Ss[1],4,0,7); dctx.fill();
+  dctx.beginPath(); dctx.arc(Ps[0],Ps[1],4,0,7); dctx.fill();
+  dctx.fillStyle=getCss('--blue');
+  dctx.beginPath(); dctx.arc(Qs[0],Qs[1],5,0,7); dctx.fill();
+
+  // 标题注解
+  dctx.fillStyle="#607D8B"; dctx.font="12px sans-serif";
+  dctx.fillText("弦 = 重力 G（固定）", Ss[0]+10, (Ss[1]+Ps[1])/2);
+  drawSub(dctx, "F", "N", (Ps[0]+Qs[0])/2-14, (Ps[1]+Qs[1])/2-6, getCss('--blue'));
+  drawSub(dctx, "F", "T", (Qs[0]+Ss[0])/2-14, (Qs[1]+Ss[1])/2-6, getCss('--orange'));
+}
+
+// 画带下标的力符号（如 F_N）
+function drawSub(ctx, base, sub, x, y, color){
+  ctx.fillStyle=color;
+  ctx.font="italic 13px 'Times New Roman', serif";
+  ctx.fillText(base, x, y);
+  const w = ctx.measureText(base).width;
+  ctx.font="italic 10px 'Times New Roman', serif";
+  ctx.fillText(sub, x+w+1, y+3);
+}
+
+// ================= 变化曲线面板 =================
+const graph = document.getElementById('graph');
+const gctx = graph.getContext('2d');
+const GW=graph.width, GH=graph.height;
+const gpad=46;
+function gX(a){ return gpad + (a/(90*DEG))*(GW-2*gpad); }
+function gY(f){ const max=16; return GH-gpad - (f/max)*(GH-2*gpad); }
+function drawGraph(){
+  gctx.clearRect(0,0,GW,GH);
+  gctx.fillStyle="#fff"; gctx.fillRect(0,0,GW,GH);
+  // 轴
+  gctx.strokeStyle="#CFD8DC"; gctx.lineWidth=1;
+  gctx.beginPath(); gctx.moveTo(gpad,gpad-10); gctx.lineTo(gpad,GH-gpad); gctx.lineTo(GW-gpad+10,GH-gpad); gctx.stroke();
+  gctx.fillStyle="#607D8B"; gctx.font="11px sans-serif";
+  for(let f=0;f<=16;f+=4){ gctx.fillText(f+"N", 8, gY(f)+4); gctx.strokeStyle="#ECEFF1"; gctx.beginPath(); gctx.moveTo(gpad,gY(f)); gctx.lineTo(GW-gpad,gY(f)); gctx.stroke(); }
+  for(let d=0;d<=90;d+=30){ gctx.fillText(d+"°", gX(d*DEG)-8, GH-gpad+16); }
+  // FN 曲线（蓝）
+  gctx.strokeStyle=getCss('--blue'); gctx.lineWidth=2.5; gctx.beginPath();
+  for(let i=0;i<=180;i++){ const a=i/2*DEG; const x=gX(a), y=gY(FN(a)); i?gctx.lineTo(x,y):gctx.moveTo(x,y);} gctx.stroke();
+  // FT 曲线（橙）
+  gctx.strokeStyle=getCss('--orange'); gctx.lineWidth=2.5; gctx.beginPath();
+  for(let i=0;i<=180;i++){ const a=i/2*DEG; const x=gX(a), y=gY(FT(a)); i?gctx.lineTo(x,y):gctx.moveTo(x,y);} gctx.stroke();
+  // 关键点
+  const pts=[[30*DEG,"α=30° F_N=8√3",getCss('--blue')],[60*DEG,"α=60° 相等=12",'#2E7D32'],[90*DEG,"α=90° F_T=8√3",getCss('--orange')]];
+  gctx.font="11px sans-serif";
+  pts.forEach(p=>{ const x=gX(p[0]); gctx.strokeStyle=p[2]; gctx.setLineDash([3,3]); gctx.beginPath(); gctx.moveTo(x,gpad-10); gctx.lineTo(x,GH-gpad); gctx.stroke(); gctx.setLineDash([]); gctx.fillStyle=p[2];
+    if(p[0]>=90*DEG-0.01){ gctx.textAlign="right"; gctx.fillText(p[1], x-6, gpad+2); gctx.textAlign="left"; }
+    else { gctx.fillText(p[1], x-30, gpad+2); }
+  });
+  // 当前 α
+  const cx=gX(alpha);
+  gctx.strokeStyle="#455A64"; gctx.lineWidth=1.5; gctx.beginPath(); gctx.moveTo(cx,gpad-10); gctx.lineTo(cx,GH-gpad); gctx.stroke();
+  gctx.fillStyle=getCss('--blue'); gctx.beginPath(); gctx.arc(cx,gY(FN(alpha)),4,0,7); gctx.fill();
+  gctx.fillStyle=getCss('--orange'); gctx.beginPath(); gctx.arc(cx,gY(FT(alpha)),4,0,7); gctx.fill();
+}
+
+function getCss(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+// ---------- 主循环 ----------
+function updateReadout(){
+  document.getElementById('aVal').textContent = Math.round(alpha/DEG);
+  document.getElementById('fnVal').textContent = FN(alpha).toFixed(2);
+  document.getElementById('ftVal').textContent = FT(alpha).toFixed(2);
+  document.getElementById('slider').value = (alpha/DEG).toFixed(1);
+}
+function drawAll(){ drawScene(); drawDiagram(); drawGraph(); updateReadout(); }
+
+function loop(now){
+  const dt=(now-last)/1000; last=now;
+  if(playing){
+    alpha += 14*DEG*dt;          // 14°/s
+    if(alpha>90*DEG) alpha=0;
+  }
+  drawAll();
+  requestAnimationFrame(loop);
+}
+
+// ---------- 控制 ----------
+document.getElementById('play').addEventListener('click', e=>{
+  playing=!playing; e.target.textContent = playing? "⏸ 暂停":"▶ 播放";
+});
+document.getElementById('slider').addEventListener('input', e=>{
+  alpha = parseFloat(e.target.value)*DEG; playing=false;
+  document.getElementById('play').textContent="▶ 播放";
+});
+document.querySelectorAll('button[data-a]').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    alpha = parseFloat(b.dataset.a)*DEG; playing=false;
+    document.getElementById('play').textContent="▶ 播放";
+  });
+});
+document.getElementById('showCircle').addEventListener('change', drawAll);
+
+// ---------- URL 定位：#a=30 可直接定格在 α=30° ----------
+(function(){
+  const m = location.hash.match(/a=(\d+(?:\.\d+)?)/);
+  if(m){ const v=parseFloat(m[1]); if(v>=0 && v<=90){ alpha=v*DEG; playing=false;
+    const pb=document.getElementById('play'); if(pb) pb.textContent="▶ 播放"; } }
+})();
+
+drawAll();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

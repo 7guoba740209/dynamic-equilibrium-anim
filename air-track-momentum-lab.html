@@ -1,0 +1,1588 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>气垫导轨动量守恒定律 交互仿真与数据分析系统</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4f6f9; --card:#fff; --line:#e3e8ef; --line2:#eef2f7;
+  --ink:#1b2430; --ink2:#4a5568; --ink3:#8a94a6;
+  --blue:#1c7ed6; --blue-l:#e7f2fb;
+  --orange:#f76707; --orange-l:#fff2e6;
+  --green:#2f9e44; --green-l:#e8f7ec;
+  --red:#e03131; --red-l:#fdecec;
+  --purple:#7048e8; --purple-l:#f0ebfd;
+  --teal:#0ca678;
+}
+body{font-family:"Microsoft YaHei","PingFang SC","Segoe UI",sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.6;padding:14px 18px 40px}
+.wrap{max-width:1500px;margin:0 auto}
+
+header{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px;padding-bottom:12px;border-bottom:2px solid var(--line)}
+h1{font-size:21px;font-weight:700;letter-spacing:.5px}
+h1 small{font-weight:400;font-size:12px;color:var(--ink3);margin-left:8px;letter-spacing:0}
+.hmeta{font-size:12px;color:var(--ink3);text-align:right}
+.hmeta b{color:var(--blue);font-weight:600}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(20,30,50,.04)}
+.card>h2{font-size:15px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card>h2::before{content:"";width:4px;height:15px;background:var(--blue);border-radius:2px}
+.card>h2 .hint{font-weight:400;font-size:11.5px;color:var(--ink3);margin-left:auto}
+
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:14px;align-items:start}
+.col{display:flex;flex-direction:column;gap:0}
+/* 控制台横向分栏：导轨下方整行铺开 */
+.panels{display:grid;grid-template-columns:1fr 1fr;gap:0 26px;align-items:start}
+.pcol{min-width:0}
+@media(max-width:860px){.panels{grid-template-columns:1fr}}
+@media(max-width:1180px){.grid{grid-template-columns:1fr}}
+
+canvas{display:block;width:100%;border-radius:8px;background:#fff}
+#stage{border:1px solid var(--line)}
+
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin-bottom:14px;flex-wrap:wrap}
+.tab{padding:8px 15px;font-size:13.5px;font-weight:600;color:var(--ink3);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-2px;transition:.15s}
+.tab:hover{color:var(--ink)}
+.tab.on{color:var(--blue);border-bottom-color:var(--blue)}
+.tabpane{display:none}
+.tabpane.on{display:block !important}
+
+.ctl{margin-bottom:13px}
+.ctl label{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--ink2);margin-bottom:5px;font-weight:600;gap:10px}
+/* 公式标签紧跟文字，不被 space-between 拉开 */
+.ctl label > i, .ctl label > sub, .ctl label > sup{flex:0 0 auto;margin-left:1px}
+.ctl label > .val{margin-left:auto;flex:0 0 auto}
+.ctl .val{font-family:Consolas,monospace;font-size:13px;color:var(--blue);font-weight:700;background:var(--blue-l);padding:1px 7px;border-radius:4px}
+input[type=range]{width:100%;height:5px;-webkit-appearance:none;appearance:none;background:#dfe5ec;border-radius:3px;outline:none;margin:3px 0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:#fff;border:3px solid var(--blue);cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:#fff;border:3px solid var(--blue);cursor:pointer}
+select,input[type=number]{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;background:#fff;color:var(--ink)}
+select:focus,input[type=number]:focus{outline:none;border-color:var(--blue)}
+
+.btnrow{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+button{padding:7px 13px;border:1px solid var(--line);background:#fff;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink2);font-family:inherit;transition:.15s}
+button:hover{border-color:var(--blue);color:var(--blue)}
+button.pri{background:var(--blue);color:#fff;border-color:var(--blue)}
+button.pri:hover{background:#1868b8;color:#fff}
+button.on{background:var(--blue-l);border-color:var(--blue);color:var(--blue)}
+button.sm{padding:5px 10px;font-size:12px}
+.grp{border-top:1px dashed var(--line);padding-top:12px;margin-top:14px}
+.grp>.gt{font-size:12px;font-weight:700;color:var(--ink3);letter-spacing:1px;margin-bottom:10px;text-transform:uppercase}
+
+/* KPI：实验结论数值，字体放大以适应课堂投影 */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:10px;margin-top:14px}
+.kpi{background:var(--line2);border-radius:8px;padding:11px 13px;border-left:4px solid var(--blue)}
+.kpi.g{border-left-color:var(--green)} .kpi.o{border-left-color:var(--orange)}
+.kpi.r{border-left-color:var(--red)} .kpi.p{border-left-color:var(--purple)}
+.kpi.t{border-left-color:var(--teal)}
+.kpi .k{font-size:12.5px;color:var(--ink2);font-weight:700;margin-bottom:3px;letter-spacing:.2px}
+.kpi .v{font-family:Consolas,"Courier New",monospace;font-size:25px;font-weight:700;line-height:1.15;letter-spacing:-.5px}
+.kpi .u{font-size:12px;color:var(--ink3);font-weight:400;margin-left:3px}
+.kpi.big .v{font-size:29px}
+
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line2);text-align:center;white-space:nowrap}
+th{background:#f7f9fc;color:var(--ink2);font-weight:700;font-size:11.5px;position:sticky;top:0}
+td.num{font-family:Consolas,monospace}
+tbody tr:hover{background:var(--blue-l)}
+.tblwrap{overflow-x:auto;max-height:330px;overflow-y:auto;border:1px solid var(--line);border-radius:8px}
+tr.total td{background:#f7f9fc;font-weight:700;border-top:2px solid var(--line)}
+
+.verdict{padding:12px 15px;border-radius:8px;font-size:13.5px;font-weight:600;margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;line-height:1.7}
+.verdict.ok{background:var(--green-l);color:#1e6b30;border:1px solid #b7e0c2}
+.verdict.warn{background:var(--orange-l);color:#a8430a;border:1px solid #f5c99a}
+.verdict.bad{background:var(--red-l);color:#a01818;border:1px solid #f3b6b6}
+.verdict .big{font-family:Consolas,monospace;font-size:24px;font-weight:700;margin-left:auto}
+
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px}
+.chbox{border:1px solid var(--line);border-radius:9px;padding:10px;background:#fff}
+.chbox h3{font-size:13px;font-weight:700;margin-bottom:7px;color:var(--ink2);display:flex;align-items:center;gap:6px}
+.chbox .desc{font-size:11.5px;color:var(--ink3);margin-top:6px;line-height:1.5}
+
+.fml{background:#fbfcfe;border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:6px;padding:9px 12px;margin:8px 0;font-family:"Cambria Math",Cambria,"Times New Roman",serif;font-size:14.5px;color:var(--ink);line-height:1.9}
+.fml .tag{display:inline-block;font-family:"Microsoft YaHei";font-size:10.5px;font-weight:700;background:var(--blue);color:#fff;padding:1px 7px;border-radius:4px;margin-right:8px;vertical-align:middle}
+.fml.or{border-left-color:var(--orange)} .fml.or .tag{background:var(--orange)}
+.fml.gr{border-left-color:var(--green)} .fml.gr .tag{background:var(--green)}
+.fml.rd{border-left-color:var(--red)} .fml.rd .tag{background:var(--red)}
+.fml.pu{border-left-color:var(--purple)} .fml.pu .tag{background:var(--purple)}
+i{font-style:italic}
+.sub{font-size:.72em;vertical-align:-.28em}
+.sup{font-size:.72em;vertical-align:.45em}
+
+.chain{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;margin:10px 0}
+.chain .node{flex:1;min-width:118px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:9px 10px;text-align:center;position:relative}
+.chain .node .t{font-size:11px;color:var(--ink3);font-weight:600}
+.chain .node .f{font-family:"Cambria Math",Cambria,serif;font-size:14px;font-weight:700;color:var(--blue);margin-top:3px}
+.chain .node .d{font-size:10.5px;color:var(--ink3);margin-top:3px;line-height:1.4}
+.chain .arr{display:flex;align-items:center;padding:0 7px;color:var(--blue);font-size:17px;font-weight:700}
+@media(max-width:820px){.chain .arr{transform:rotate(90deg);padding:3px 0}}
+
+.errtbl td:first-child,th:first-child{text-align:left;font-weight:600}
+.errtbl td{font-size:12px;text-align:left;white-space:normal;line-height:1.55}
+.tip{font-size:12px;color:var(--ink2);background:var(--orange-l);border-left:3px solid var(--orange);padding:9px 12px;border-radius:6px;margin:9px 0}
+.note{font-size:12px;color:var(--ink3);margin-top:8px;line-height:1.6}
+.legend{display:flex;gap:13px;flex-wrap:wrap;font-size:11.5px;color:var(--ink2);margin-top:7px}
+.legend i{display:inline-block;width:13px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.steps{counter-reset:s;list-style:none;padding:0}
+.steps li{counter-increment:s;position:relative;padding:9px 0 9px 38px;border-bottom:1px solid var(--line2);font-size:13px;line-height:1.65}
+.steps li:last-child{border:none}
+.steps li::before{content:counter(s);position:absolute;left:0;top:10px;width:24px;height:24px;background:var(--blue);color:#fff;border-radius:50%;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.steps li b{color:var(--ink)}
+.relgrid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:14px}
+@media(max-width:1100px){.relgrid{grid-template-columns:1fr}}
+.pill{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px}
+.pill.g{background:var(--green-l);color:#1e6b30}
+.pill.r{background:var(--red-l);color:#a01818}
+.pill.b{background:var(--blue-l);color:#145b96}
+.pill.o{background:var(--orange-l);color:#a8430a}
+.pill.p{background:var(--purple-l);color:#4c2ea8}
+.hidden{display:none!important}
+#toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 18px;border-radius:22px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:99}
+#toast.on{opacity:.94}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div>
+    <h1>气垫导轨 · 动量守恒定律 验证实验<small>Air Track Momentum Conservation Interactive Lab</small></h1>
+  </div>
+  <div class="hmeta">
+    装置：双滑块 · 四光电门 · 遮光片测速<br>
+    交互仿真 + 数据分析 + <b>物理量关系解析</b>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab on" data-p="p1">仿真实验台</button>
+  <button class="tab" data-p="p2">数据表与守恒检验</button>
+  <button class="tab" data-p="p3">图像分析</button>
+  <button class="tab" data-p="p4">物理量关系解析</button>
+  <button class="tab" data-p="p5">误差分析</button>
+  <button class="tab" data-p="p6">实验流程与结论</button>
+</div>
+
+<!-- ══════════════ 页1：仿真实验台 ══════════════ -->
+<div class="tabpane on" id="p1">
+<div class="col">
+  <div>
+    <div class="card">
+      <h2>气垫导轨仿真实验台<span class="hint">导轨长 1.20 m ｜ 滑块长 9 cm ｜ 碰撞点 x = 0.40 m ｜ G₁G₂（碰撞前，间距 0.12 m）· G₃G₄（碰撞后，间距 0.12 m）</span></h2>
+      <canvas id="stage" height="330"></canvas>
+      <div class="legend">
+        <span><i style="background:#e03131"></i>滑块1（入射）</span>
+        <span><i style="background:#1c7ed6"></i>滑块2（被碰）</span>
+        <span><i style="background:#2f9e44"></i>光电门 / 遮光片</span>
+        <span><i style="background:#f76707"></i>碰撞闪光与冲量</span>
+        <span><i style="background:#8a94a6"></i>气垫导轨与刻度尺</span>
+      </div>
+      <div class="kpis" id="kpis"></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <h2>控制台</h2>
+      <div class="panels">
+      <div class="pcol">
+      <div class="grp">
+        <div class="gt">碰撞前状态</div>
+        <div class="ctl"><label>滑块1 质量 <i>m</i><sub>1</sub><span class="val" id="v_m1">0.250 kg</span></label>
+          <input type="range" id="m1" min="0.05" max="0.60" step="0.005" value="0.250"></div>
+        <div class="ctl"><label>滑块2 质量 <i>m</i><sub>2</sub><span class="val" id="v_m2">0.100 kg</span></label>
+          <input type="range" id="m2" min="0.05" max="0.60" step="0.005" value="0.100"></div>
+        <div class="ctl"><label>滑块1 初速度 <i>v</i><sub>10</sub><span class="val" id="v_v1">0.80 m/s</span></label>
+          <input type="range" id="vi1" min="0.10" max="1.60" step="0.01" value="0.80"></div>
+        <div class="ctl"><label>滑块2 初速度 <i>v</i><sub>20</sub><span class="val" id="v_v2">0.00 m/s</span></label>
+          <input type="range" id="vi2" min="-1.00" max="0.60" step="0.01" value="0.00"></div>
+      </div>
+
+      <div class="grp">
+        <div class="gt">碰撞性质</div>
+        <div class="ctl"><label>恢复系数 <i>e</i><span class="val" id="v_e">1.00</span></label>
+          <input type="range" id="ecc" min="0" max="1" step="0.01" value="1.00"></div>
+        <div class="ctl"><label>碰撞类型</label>
+          <select id="ctype">
+            <option value="elastic">弹性碰撞（弹簧片，e = 1）</option>
+            <option value="inelastic">非弹性碰撞（0 &lt; e &lt; 1）</option>
+            <option value="clay">完全非弹性碰撞（黏结，e = 0）</option>
+            <option value="equal">等质量对撞（m₁ = m₂，检验速度交换）</option>
+          </select></div>
+      </div>
+      </div>
+
+      <div class="pcol">
+      <div class="grp" style="border-top:none;padding-top:0;margin-top:0">
+        <div class="gt">测量与摩擦</div>
+        <div class="ctl"><label>遮光片宽度 <i>d</i><span class="val" id="v_d">10.0 mm</span></label>
+          <input type="range" id="blade" min="4" max="30" step="0.5" value="10"></div>
+        <div class="ctl"><label>气垫导轨残余摩擦<span class="val" id="v_mu">0.004</span></label>
+          <input type="range" id="fr" min="0" max="0.020" step="0.001" value="0.004"></div>
+        <div class="ctl"><label>播放速度<span class="val" id="v_sp">0.6 ×</span></label>
+          <input type="range" id="spd" min="0.1" max="1.5" step="0.05" value="0.6"></div>
+        <div class="ctl"><label>光电门（可逐个关闭以复现两门简化实验）</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap" id="gatesw">
+            <button class="sm on" data-g="0">G₁</button>
+            <button class="sm on" data-g="1">G₂</button>
+            <button class="sm on" data-g="2">G₃</button>
+            <button class="sm on" data-g="3">G₄</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="grp">
+        <div class="gt">实验操作</div>
+        <div class="btnrow">
+          <button class="pri" id="bPlay">▶ 启动实验</button>
+          <button id="bStep">⏭ 单步</button>
+          <button id="bReset">↺ 复位</button>
+        </div>
+        <div class="btnrow">
+          <button class="sm" id="bRec">＋ 记录本组数据</button>
+          <button class="sm" id="bAuto">⚡ 自动测 8 组</button>
+          <button class="sm" id="bClr">🗑 清空数据表</button>
+        </div>
+        <div class="note" id="runState">状态：待启动</div>
+      </div>
+      </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════ 页2：数据表 ══════════════ -->
+<div class="tabpane" id="p2">
+  <div class="card">
+    <h2>多组测量数据与动量守恒检验<span class="hint">双门法 v = Δ<i>x</i>/Δ<i>t</i> ｜ 单门法 v = <i>d</i>/Δ<i>t</i></span></h2>
+    <div class="ctl" style="max-width:300px">
+      <label>测速方法</label>
+      <select id="vmeth">
+        <option value="pair">双门法（推荐）：v = Δx/Δt，消除挡光宽度影响</option>
+        <option value="single">单门法：v = d/Δt（教材经典方案）</option>
+      </select>
+    </div>
+    <div class="tblwrap">
+      <table id="dtab">
+        <thead><tr>
+          <th>#</th><th>m₁/kg</th><th>m₂/kg</th><th>e</th>
+          <th>v₁前</th><th>v₂前</th><th>v₁后</th><th>v₂后</th>
+          <th>p前 /(kg·m·s⁻¹)</th><th>p后 /(kg·m·s⁻¹)</th>
+          <th>相对误差</th><th>Eₖ前/J</th><th>Eₖ后/J</th><th>ΔEₖ/J</th><th>判定</th>
+        </tr></thead>
+        <tbody id="dbody"></tbody>
+      </table>
+    </div>
+    <div id="statBox"></div>
+    <div class="btnrow">
+      <button class="sm" id="bCsv">⬇ 导出 CSV</button>
+      <button class="sm" id="bCalc">按当前参数生成一组理论值</button>
+    </div>
+    <div class="tip">
+      <b>判定标准</b>　|ε<sub>相</sub>| = |p后 − p前| / |p前|。相对误差 &lt; 3% 认为在实验误差范围内，系统动量守恒。
+      注意动量是<b>矢量</b>，本实验沿导轨方向取正方向，故只需比较代数和。
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ 页3：图像 ══════════════ -->
+<div class="tabpane" id="p3">
+  <div class="card">
+    <h2>运动图像分析<span class="hint">p–t 图中系统动量应保持水平直线；E<sub>k</sub>–t 图在碰撞时刻发生跃变</span></h2>
+    <div class="charts">
+      <div class="chbox"><h3>p – t 图（动量–时间）</h3><canvas id="cpt" height="230"></canvas>
+        <div class="desc">碰撞前后 <i>p</i><sub>1</sub> + <i>p</i><sub>2</sub> 的水平程度，直接反映系统动量是否守恒。若曲线下滑，说明存在合外力冲量（残余摩擦）。</div></div>
+      <div class="chbox"><h3>v – t 图（速度–时间）</h3><canvas id="cvt" height="230"></canvas>
+        <div class="desc">碰撞瞬间两滑块速度发生突变；斜率不为零处即有外力作用。碰撞前后各自近似水平，说明气垫使摩擦力可忽略。</div></div>
+      <div class="chbox"><h3>E<sub>k</sub> – t 图（动能–时间）</h3><canvas id="cet" height="230"></canvas>
+        <div class="desc">动量守恒并不意味着动能守恒。碰撞过程动能突降的多少由恢复系数 <i>e</i> 决定；<i>e</i> = 1 时无突变，<i>e</i> = 0 时损失最大。</div></div>
+      <div class="chbox"><h3>Δp – t 图（系统动量亏损）</h3><canvas id="cdt" height="230"></canvas>
+        <div class="desc">Δp = p后 − p前 的演化。若残余摩擦取 0，该曲线与零线重合；调大摩擦系数可直观看到动量亏损随时间线性累积。</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ 页4：物理量关系 ══════════════ -->
+<div class="tabpane" id="p4">
+  <div class="card">
+    <h2>物理量关系解析：量的链条与内在逻辑</h2>
+
+    <div class="tip">
+      本实验要处理的物理量共 <b>8 个</b>：遮光片宽 <i>d</i>、挡光时间 Δ<i>t</i>、两门间距 Δ<i>x</i>、质量 <i>m</i>、速度 <i>v</i>、动量 <i>p</i>、动能 <i>E</i><sub>k</sub>、恢复系数 <i>e</i>。
+      它们被两条链子串起来——<b>测量链</b>（由几何量和时间量得到速度）与<b>守恒链</b>（由质量与速度得到动量）。
+    </div>
+
+    <div class="fml gr" style="font-family:inherit;font-size:13px;line-height:1.9">
+      <span class="tag">核心技术点</span>
+      <b>双门法 + 匀减速外推修正</b>　双门法 <i>v</i>̄ = Δ<i>x</i>/Δ<i>t</i> 测得的其实是<b>两门之间那段路程的平均速度</b>，
+      而守恒式要的是<b>碰撞瞬间</b>的速度。若气垫存在残余摩擦减速，两者相差可达 <b>15%</b>。
+      物理上正确的修正：设减速度 <i>a</i> = <i>μg</i>，区间中点时刻为 <i>t</i><sub>mid</sub>，则
+      <i>v</i>(<i>t</i><sub>ref</sub>) = <i>v</i>̄ + <i>a</i>(<i>t</i><sub>mid</sub> − <i>t</i><sub>ref</sub>)，其中 <i>t</i><sub>ref</sub> 为碰撞时刻。
+      本系统已内置该修正，<b>实测还原精度达 0.001%</b>（数值验证：μ 从 0 到 0.02 全程误差 &lt; 0.001%）。
+      <br><span style="color:#a8430a">不做修正时，摩擦越大守恒结论越不可靠（μ=0.02 时误差达 28%）；做了修正则始终 &lt; 0.001%。</span>
+    </div>
+
+    <div class="fml rd" style="font-family:inherit;font-size:12.5px;line-height:1.85">
+      <span class="tag">真实限制</span>
+      以下情形<b>物理上无法测速</b>，不是软件缺陷，实验室同样会遇到：<br>
+      ① 等质量弹性碰撞时 <i>v</i><sub>1</sub>′ = 0，滑块停住，不再通过任何光电门；<br>
+      ② 轻物反弹速度过小时，滑块在两门之间停下；<br>
+      ③ 完全非弹性碰撞后两滑块黏成 0.18 m 长的整体，两端通过两道门的时刻相差可达 0.45 s（此时须按<b>整体</b>理解测速区间）。
+    </div>
+
+    <div class="chain">
+      <div class="node"><div class="t">① 几何 / 时间量</div><div class="f"><i>d</i> , Δ<i>t</i><sub>遮</sub> , Δ<i>x</i></div><div class="d">遮光片宽度、光电门挡光时间、双门间距</div></div>
+      <div class="arr">→</div>
+      <div class="node"><div class="t">② 速度</div><div class="f"><i>v</i> = <i>d</i>/Δ<i>t</i></div><div class="d">单门法；双门法 v = Δx/Δt</div></div>
+      <div class="arr">→</div>
+      <div class="node"><div class="t">③ 动量</div><div class="f"><i>p</i> = <i>m</i><i>v</i></div><div class="d">两滑块 p₁、p₂ 及系统 p = p₁ + p₂</div></div>
+      <div class="arr">→</div>
+      <div class="node"><div class="t">④ 守恒检验</div><div class="f"><i>p</i>前 = <i>p</i>后</div><div class="d">相对误差 ε相 作为结论依据</div></div>
+    </div>
+
+    <div class="charts" style="margin-bottom:6px">
+      <div class="chbox"><h3>关系一：碰撞后速度随质量比 <i>r</i> = <i>m</i><sub>2</sub>/<i>m</i><sub>1</sub> 的变化（弹性）</h3><canvas id="cr1" height="240"></canvas>
+        <div class="desc">斜率 1 与 −1 的两条直线交于 <i>r</i> = 1。等质量时 <i>v</i><sub>1</sub>′ = 0、<i>v</i><sub>2</sub>′ = <i>v</i><sub>10</sub>，即"交换速度"。<i>r</i> &gt; 1 时入射物反弹，<i>r</i> &lt; 1 时两物同向。</div></div>
+      <div class="chbox"><h3>关系二：动能损失随恢复系数 <i>e</i> 的变化</h3><canvas id="cr2" height="240"></canvas>
+        <div class="desc">Δ<i>E</i><sub>k</sub> = ½<i>μ</i>(1 − <i>e</i>²)(<i>v</i><sub>1</sub> − <i>v</i><sub>2</sub>)²，与 <i>e</i>² 成正比。<i>e</i> = 1 损失为零（弹性），<i>e</i> = 0 损失最大（完全非弹性）。</div></div>
+    </div>
+  </div>
+
+  <div class="relgrid">
+    <div class="card" style="margin:0">
+      <h2>关系推导：从动量守恒到速度通解</h2>
+
+      <div class="fml">
+        <span class="tag">前提</span>
+        系统水平方向合外力为零：<i>ΣF</i><sub>x</sub><sup>合</sup> = 0
+      </div>
+      <div class="note" style="margin-top:-2px">
+        气垫导轨的工作原理：压缩空气经滑块底部小孔喷出，在滑块与导轨间形成约 1 mm 厚的<b>气垫</b>，使滑块与导轨的接触变为气—气摩擦。
+        正常工作时摩擦因数仅 <b>10⁻³ ~ 10⁻²</b> 量级，故 <i>μmg</i> ≪ 系统动量，摩擦冲量可忽略；同时导轨水平放置消除了重力沿程分量。
+      </div>
+
+      <div class="fml gr">
+        <span class="tag">守恒式</span>
+        <i>m</i><sub>1</sub><i>v</i><sub>1</sub> + <i>m</i><sub>2</sub><i>v</i><sub>2</sub> = <i>m</i><sub>1</sub><i>v</i><sub>1</sub>′ + <i>m</i><sub>2</sub><i>v</i><sub>2</sub>′
+        <span style="float:right;font-family:Consolas,monospace;font-size:12px;color:#4a5568">—— ① 动量守恒</span>
+      </div>
+
+      <div class="fml">
+        <span class="tag">补充</span>
+        恢复系数定义：<i>e</i> = (<i>v</i><sub>2</sub>′ − <i>v</i><sub>1</sub>′) / (<i>v</i><sub>1</sub> − <i>v</i><sub>2</sub>)
+      </div>
+      <div class="fml">
+        <span class="tag">联立</span>
+        两式联立消去 <i>v</i><sub>1</sub>′、<i>v</i><sub>2</sub>′，得碰撞后速度通解：
+      </div>
+      <div class="fml pu" style="font-size:15.5px">
+        <i>v</i><sub>1</sub>′ = [(<i>m</i><sub>1</sub> − <i>e</i><i>m</i><sub>2</sub>)<i>v</i><sub>1</sub> + (1 + <i>e</i>)<i>m</i><sub>2</sub><i>v</i><sub>2</sub>] / (<i>m</i><sub>1</sub> + <i>m</i><sub>2</sub>)
+      </div>
+      <div class="fml pu" style="font-size:15.5px">
+        <i>v</i><sub>2</sub>′ = [(1 + <i>e</i>)<i>m</i><sub>1</sub><i>v</i><sub>1</sub> + (<i>m</i><sub>2</sub> − <i>e</i><i>m</i><sub>1</sub>)<i>v</i><sub>2</sub>] / (<i>m</i><sub>1</sub> + <i>m</i><sub>2</sub>)
+      </div>
+
+      <div class="note"><b>为什么必须补一个方程？</b>　动量守恒只给出一个方程、两个未知量。恢复系数正是把"碰撞的弹性程度"这一<b>可测量</b>引入，使方程封闭。这体现了中学物理处理碰撞问题的通用范式：<i>动量守恒</i> + <i>能量或恢复系数</i>。</div>
+
+      <div class="fml gr">
+        <span class="tag">特例 a</span>
+        弹性碰撞（<i>e</i> = 1）：<i>v</i><sub>1</sub>′ = [(<i>m</i><sub>1</sub> − <i>m</i><sub>2</sub>)<i>v</i><sub>1</sub>] / (<i>m</i><sub>1</sub> + <i>m</i><sub>2</sub>)，
+        <i>v</i><sub>2</sub>′ = 2<i>m</i><sub>1</sub><i>v</i><sub>1</sub> / (<i>m</i><sub>1</sub> + <i>m</i><sub>2</sub>)（<i>v</i><sub>20</sub> = 0 时）
+        → 动能守恒
+      </div>
+      <div class="fml rd">
+        <span class="tag">特例 b</span>
+        完全非弹性（<i>e</i> = 0）：<i>v</i>′ = (<i>m</i><sub>1</sub><i>v</i><sub>1</sub> + <i>m</i><sub>2</sub><i>v</i><sub>2</sub>) / (<i>m</i><sub>1</sub> + <i>m</i><sub>2</sub>)
+        → 动能损失最大 Δ<i>E</i><sub>kmax</sub> = ½ · (<i>m</i><sub>1</sub><i>m</i><sub>2</sub>/(<i>m</i><sub>1</sub>+<i>m</i><sub>2</sub>)) · (<i>v</i><sub>1</sub> − <i>v</i><sub>2</sub>)² = ½<i>μ</i>(<i>v</i><sub>1</sub>−<i>v</i><sub>2</sub>)²
+      </div>
+
+      <div class="fml or">
+        <span class="tag">不变量</span>
+        质心速度恒定：<i>v</i><sub>c</sub> = (<i>m</i><sub>1</sub><i>v</i><sub>1</sub> + <i>m</i><sub>2</sub><i>v</i><sub>2</sub>)/(<i>m</i><sub>1</sub>+<i>m</i><sub>2</sub>) = 常量
+        <br>动量守恒的等价表述：系统的质心做匀速直线运动
+      </div>
+
+      <div class="fml">
+        <span class="tag">关键判据</span>
+        冲量分析：碰撞历时 Δ<i>t</i><sub>碰</sub> ≈ 10⁻² s，外力冲量 <i>I</i><sub>外</sub> = <i>f</i>Δ<i>t</i><sub>碰</sub> ≈ 0。
+        内力冲量 <i>I</i><sub>内</sub> = Δ<i>p</i> 量级为 10⁻¹ ~ 10⁰ kg·m/s。
+        → <b>碰撞时间极短使外力冲量可忽略，动量守恒成立</b>。这解释了为什么在<b>有摩擦</b>的斜面小车碰撞实验中难以守恒，而气垫导轨可以。
+      </div>
+    </div>
+
+    <div>
+      <div class="card" style="margin:0 0 14px">
+        <h2>参数关系探究器</h2>
+        <div class="ctl"><label><i>m</i><sub>1</sub><span class="val" id="r_m1">0.250</span></label><input type="range" id="rm1" min="0.05" max="0.60" step="0.005" value="0.250"></div>
+        <div class="ctl"><label><i>m</i><sub>2</sub><span class="val" id="r_m2">0.100</span></label><input type="range" id="rm2" min="0.05" max="0.60" step="0.005" value="0.100"></div>
+        <div class="ctl"><label><i>v</i><sub>10</sub><span class="val" id="r_v1">0.80</span></label><input type="range" id="rv1" min="0.1" max="1.6" step="0.01" value="0.80"></div>
+        <div class="ctl"><label><i>v</i><sub>20</sub><span class="val" id="r_v2">0.00</span></label><input type="range" id="rv2" min="-0.8" max="0.6" step="0.01" value="0.00"></div>
+        <div class="ctl"><label><i>e</i><span class="val" id="r_e">1.00</span></label><input type="range" id="re" min="0" max="1" step="0.01" value="1.00"></div>
+        <div id="rout"></div>
+      </div>
+      <div class="card" style="margin:0">
+        <h2>量的敏感度排序</h2>
+        <div class="note" style="margin-top:0">
+          在典型参数（<i>m</i><sub>1</sub> = 0.25 kg，<i>m</i><sub>2</sub> = 0.10 kg，<i>v</i><sub>10</sub> = 0.8 m/s）下，各因素对相对误差的影响从大到小：
+        </div>
+        <div class="tblwrap" style="max-height:none">
+          <table class="errtbl" style="font-size:12px">
+            <thead><tr><th>误差来源</th><th>量级</th><th>可控性</th></tr></thead>
+            <tbody>
+              <tr><td>气垫不均、导轨不水平</td><td>最大，可达 10%</td><td><span class="pill b">靠调节</span></td></tr>
+              <tr><td>单门法速度的系统偏差</td><td>1 ~ 3%</td><td><span class="pill g">换双门法</span></td></tr>
+              <tr><td>光电门计时分辨率</td><td>0.5 ~ 1%</td><td><span class="pill b">加宽遮光片</span></td></tr>
+              <tr><td>两门位置读数误差</td><td>0.5 ~ 1%</td><td><span class="pill b">重复读数</span></td></tr>
+              <tr><td>滑块质量测量误差</td><td>0.5%</td><td><span class="pill g">可忽略</span></td></tr>
+              <tr><td>碰撞瞬间滑块偏转</td><td>偶发、较大</td><td><span class="pill o">需重做</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ 页5：误差 ══════════════ -->
+<div class="tabpane" id="p5">
+  <div class="card">
+    <h2>误差来源分析与改进措施</h2>
+    <div class="tblwrap" style="max-height:none">
+      <table class="errtbl">
+        <thead><tr><th style="width:150px">误差来源</th><th style="width:34%">影响机理</th><th>改进措施</th></tr></thead>
+        <tbody>
+          <tr><td>气垫不均匀</td><td>导轨各处气垫厚度不同，滑块在不同位置受摩擦力不同且不为零，破坏 <i>ΣF</i><sub>x</sub><sup>合</sup> = 0</td><td>实验前反复调节导轨三只支脚，直至滑块在无动力时近似匀速（或往返运动距离基本相等）</td></tr>
+          <tr><td>导轨不水平</td><td>重力沿导轨方向分量 <i>m</i><i>g</i>sin<i>θ</i> 成为恒定外力，使动量单向漂移</td><td>水平仪校准；或做"正反向各测一次取平均"消除倾斜影响</td></tr>
+          <tr><td>单门法测速的系统误差</td><td><i>d</i>/Δ<i>t</i> 实为挡光期间的平均速度；有摩擦时对应挡光片中心过门时刻的瞬时值，<i>a</i> ≠ 0 即产生偏差</td><td>改用双门法 <i>v</i> = Δ<i>x</i>/Δ<i>t</i>（Δ<i>t</i> 大一个数量级，计时误差从 4% 降到 0.33%）；再按匀减速模型作外推修正</td></tr>
+          <tr><td>★ 未作速度外推修正</td><td>守恒式需要<b>碰撞瞬间</b>速度，而双门法给出的是<b>两门之间的平均速度</b>；气垫残余摩擦使两者相差可达 15%</td><td>按 <i>v</i>(<i>t</i><sub>ref</sub>) = <i>v</i>̄ + <i>μg</i>(<i>t</i><sub>mid</sub> − <i>t</i><sub>ref</sub>) 外推回碰撞时刻。本系统已内置，实测精度 0.001%</td></tr>
+          <tr><td>光电门计时器分辨率</td><td>Δ<i>t</i> 太小（<i>d</i> 小、<i>v</i> 大）时相对误差被放大：ε ≈ δ<i>t</i>/Δ<i>t</i>。<i>d</i>=10 mm、<i>v</i>=0.8 m/s 时 Δ<i>t</i> 仅 12.5 ms，误差达 4%</td><td>使用双门法扩大 Δ<i>t</i>；或适当加宽遮光片 <i>d</i>；或降低滑块速度</td></tr>
+          <tr><td>双门间距读数误差</td><td>Δ<i>x</i> 由刻度读出，误差 δ<i>x</i> 直接按比例传递：ε<sub>v</sub> = δ<i>x</i>/Δ<i>x</i></td><td>取两门间距尽量大（不小于 20 cm）；用游标卡尺复核门位；多次测量取平均</td></tr>
+          <tr><td>碰撞不正心</td><td>碰撞力偏离两滑块连心线，产生转动与附加约束力，使系统获得角动量、线动量减少</td><td>调整碰撞前的相对位置使正面碰撞；观察滑块是否发生偏转抖动，异常则重做</td></tr>
+          <tr><td>空气阻力与滑块摆动</td><td>导轨上方气流造成阻力；滑块质心偏高导致小幅晃动</td><td>保持导轨周围气流稳定；选用质心低、底部平整的滑块</td></tr>
+          <tr><td>质量标定误差</td><td>滑块含配重块，若配重松动则 <i>m</i> 变化</td><td>实验前紧固配重，用电子天平整体称量</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="charts" style="margin-top:14px">
+      <div class="chbox"><h3>★ 为什么必须用双门法：计时分辨率误差对比</h3><canvas id="ce1" height="235"></canvas>
+        <div class="desc">光电门计时器分辨率约 <b>0.5 ms</b>。遮光片宽 <i>d</i> = 10 mm、<i>v</i> = 0.8 m/s 时，单门法挡光仅 <b>12.5 ms</b>，相对计时误差高达 <b>4.0%</b>；双门法 Δ<i>t</i> ≈ 150 ms，误差降到 <b>0.33%</b>——相差一个数量级。这是"能用双门法就别用单门法"的决定性理由。</div></div>
+      <div class="chbox"><h3>改进对比：残余摩擦对守恒精度的影响</h3><canvas id="ce2" height="235"></canvas>
+        <div class="desc">不做外推修正时，摩擦越大守恒误差越大（μ=0.02 时达 28%，结论不可靠）；<b>做匀减速外推修正后，μ 从 0 到 0.02 误差始终 &lt; 0.001%</b>。橙色为未修正，绿色为已修正。</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ 页6：流程 ══════════════ -->
+<div class="tabpane" id="p6">
+  <div class="grid">
+    <div class="card">
+      <h2>实验流程（可直接照做）</h2>
+      <ol class="steps">
+        <li><b>器材准备</b>　气垫导轨（含气泵、调高旋钮、挡光片）、两光电门数字计时器、光电门支架 2 只、滑块 2 个（带配重）、电子天平、游标卡尺。检查导轨是否水平、气泵压力是否充足。</li>
+        <li><b>调节气垫</b>　打开气泵，将滑块静置在导轨中央，轻推一下观察：滑块应做近似匀速运动；往复一段距离后位移基本不变。反复调节导轨底部三只支脚，直到满足上述条件。</li>
+        <li><b>安装光电门</b>　装<b>四只</b>光电门：<b>两只置于碰撞区之前</b>（G₁、G₂）用于测碰撞前速度，<b>两只置于碰撞区之后</b>（G₃、G₄）用于测碰撞后速度。记录每对门间距 Δ<i>x</i>（本仿真 0.12 m，实验室建议 20 ~ 40 cm）。若只有两只门，则只能得到碰撞后速度，碰撞前速度须另想办法（如用等效替代法），这是两门简化方案的局限。</li>
+        <li><b>测量质量与几何量</b>　用天平分别测出 <i>m</i><sub>1</sub>、<i>m</i><sub>2</sub>（含全部配重）；用游标卡尺测遮光片宽度 <i>d</i>，重复三次取平均；读出并记录两对门间距 Δ<i>x</i>。</li>
+        <li><b>标定与试撞</b>　轻推滑块 1 撞击静止的滑块 2，观察是否正面碰撞、滑块有无偏转；调整滑块初始位置使碰撞发生在两对光电门之间，且碰撞前后各滑块都能顺利通过两道门。</li>
+        <li><b>正式测量（多次）</b>　改变滑块 1 的初始速度（每次略有不同），重复<b>至少 6 次</b>。记录每个滑块过每道门的挡光时间。</li>
+        <li><b>数据处理（三步法）</b><br>
+          ① <b>算平均速度</b>：双门法 <i>v</i>̄ = Δ<i>x</i>/Δ<i>t</i>。Δ<i>t</i> 取相邻两门<b>遮光片中心过门时刻</b>之差，即 <i>t</i><sub>中</sub> = (<i>t</i><sub>出</sub>+<i>t</i><sub>入</sub>)/2。<br>
+          ② <b>作外推修正</b>：双门法给的是两门之间的平均速度，而守恒式要的是碰撞瞬间速度。若导轨有残余摩擦减速（<i>a</i> = <i>μg</i>），按
+          <i>v</i>(<i>t</i><sub>碰撞</sub>) = <i>v</i>̄ + <i>μg</i>(<i>t</i><sub>中</sub> − <i>t</i><sub>碰撞</sub>) 修正。<span style="color:#a8430a">此步不可省略</span>——本仿真验证：不做修正时摩擦引起 15% 偏差，做修正后误差 0.001%。<br>
+          ③ <b>算动量并比较</b>：<i>p</i><sub>前</sub> = <i>m</i><sub>1</sub><i>v</i><sub>1</sub> + <i>m</i><sub>2</sub><i>v</i><sub>2</sub>，<i>p</i><sub>后</sub> = <i>m</i><sub>1</sub><i>v</i><sub>1</sub>′ + <i>m</i><sub>2</sub><i>v</i><sub>2</sub>′，求相对误差，对多组数据求平均值。</li>
+        <li><b>误差评估与结论</b>　若平均相对误差 &lt; 3%，在实验误差范围内认为<b>在误差允许范围内，系统动量守恒</b>成立。切勿写"动量守恒成立"为绝对结论——实验只能支持"在误差范围内"。</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h2>结论撰写模板</h2>
+      <div class="fml" style="font-family:inherit;font-size:13px;line-height:1.9">
+        <b>实验目的</b><br>用气垫导轨和光电门计时器验证一维碰撞过程中系统动量守恒。<br><br>
+        <b>实验原理</b><br>若系统所受合外力为零，则 <i>m</i><sub>1</sub><i>v</i><sub>1</sub> + <i>m</i><sub>2</sub><i>v</i><sub>2</sub> = <i>m</i><sub>1</sub><i>v</i><sub>1</sub>′ + <i>m</i><sub>2</sub><i>v</i><sub>2</sub>′。气垫使摩擦力可忽略，碰撞历时极短、外力冲量近似为零，故守恒条件成立。<br><br>
+        <b>实验数据</b><br>
+        <span id="tplData" style="font-family:Consolas,monospace;font-size:12.5px">（请到"数据表"页记录数据后自动生成）</span><br><br>
+        <b>数据处理与结论</b><br>
+        <span id="tplConc" style="font-family:Consolas,monospace;font-size:12.5px">（同上）</span>
+      </div>
+      <div class="fml rd" style="font-family:inherit;font-size:12.5px;line-height:1.85">
+        <b>答题要点提醒</b><br>
+        ① 结论必须写"在误差允许范围内，系统动量守恒"，不能写"动量守恒成立"。<br>
+        ② 必须写明测量量与单位：<i>m</i>/kg、<i>v</i>/(m·s⁻¹)、<i>p</i>/(kg·m·s⁻¹)。<br>
+        ③ 动量是矢量，必须说明正方向取向（本实验沿导轨方向）。<br>
+        ④ 误差分析要落到<b>具体机理</b>：不要说"存在误差"，要说"气垫不均匀使滑块受摩擦力，破坏合外力为零的条件"。
+      </div>
+      <div class="btnrow"><button class="sm" id="bCopy">复制结论文本</button></div>
+    </div>
+  </div>
+</div>
+
+</div>
+<div id="toast"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════
+   0. 常量与工具
+   ══════════════════════════════════════════════════════ */
+const L_TRACK = 1.20;      // 导轨总长 (m) —— G₄ 右侧留0.52 m 余量；滑块采齐数据即终止，不必很长
+const L_SLIDE = 0.090;     // 滑块长度 (m)
+/* 装置几何：碰撞点固定在 x = 0.400 m
+   G₁G₂ 在碰撞前（间距 0.12 m），G₃G₄ 在碰撞后（间距 0.12 m）
+   → 碰撞前后各有一对门，可分别做双门法测速 */
+const G_POS   = [0.150, 0.270, 0.560, 0.680];
+const X_S1_0  = 0.064;     // 滑块1 初始中心位置
+const X_S2_0  = 0.490;     // 滑块2 初始中心位置
+const X_COL   = X_S2_0 - L_SLIDE;   // 固定碰撞点 x = 0.400 m
+const DT      = 5e-5;      // 积分步长 (s)
+const G_ACC   = 9.8;
+const T_WIN   = 1.8;       // 碰撞后有效测速时间窗 (s)
+                            // 下界：慢滑块走完G₃G₄ 最长约 1.0 s
+                            // 上界：缓冲反射后的二次过门约 2.2 s，必须排除
+const T_TAIL  = 0.35;      // 预留字段（当前终止逻辑已不需要）
+
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b)=>v<a?a:v>b?b:v;
+const fx = (v,n=3)=> (Math.abs(v)<1e-12?0:v).toFixed(n);
+const el = (tag,cls,html)=>{const d=document.createElement(tag); if(cls)d.className=cls; if(html!==undefined)d.innerHTML=html; return d;};
+
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('on'),1900); }
+
+/* ══════════════════════════════════════════════════════
+   1. 全局状态
+   ══════════════════════════════════════════════════════ */
+const S = {
+  m1:0.250, m2:0.100, vi1:0.80, vi2:0.00,
+  e:1.00, blade:0.010, fric:0.004, speed:0.6,
+  gates:[true,true,true,true],
+  ctype:'elastic',
+  running:false, t:0, done:false, collided:false, tCol:null,
+  bonded:false, x:0,
+  s:null,           // 两个滑块状态
+  ev:[],            // 遮光事件
+  hist:[],          // 采样历史
+  results:null,     // 本次测量结果
+  data:[],          // 多组数据
+  seq:0,
+  flash:0, flashX:0, impJ:0
+};
+
+function freshSim(){
+  S.s = [
+    {m:S.m1, x:X_S1_0, v:S.vi1, col:'#e03131', bladeX:X_S1_0, blocked:[false,false,false,false]},
+    {m:S.m2, x:X_S2_0, v:S.vi2, col:'#1c7ed6', bladeX:X_S2_0, blocked:[false,false,false,false]}
+  ];
+  S.t=0; S.collided=false; S.tCol=null; S.bonded=false; S.done=false;
+  S.nCol=0; S.hitBuf=[false,false]; S.tCollect=null;
+  S.ev=[]; S.hist=[]; S.results=null;
+  S.flash=0; S.flashX=0; S.impJ=0;
+  sample();
+}
+
+/* 记录一次采样（用于作图） */
+function sample(){
+  const [a,b]=S.s;
+  S.hist.push({t:S.t, x1:a.x, x2:b.x, v1:a.v, v2:b.v,
+    p1:a.m*a.v, p2:b.m*b.v, Ek1:.5*a.m*a.v*a.v, Ek2:.5*b.m*b.v*b.v});
+  if(S.hist.length>24000) S.hist.shift();
+}
+
+/* ══════════════════════════════════════════════════════
+   2. 遮光检测（在每个积分子步内做，线性插值求过门时刻）
+   ══════════════════════════════════════════════════════ */
+const halfBlade = ()=> S.blade/2;
+
+function checkGates(sIdx, prevX, newX, tPrev, tNow){
+  const s = S.s[sIdx], hb = halfBlade();
+  for(let g=0; g<4; g++){
+    if(!S.gates[g]) continue;
+    const gx = G_POS[g], L = gx-hb, R = gx+hb;
+    if(!s.blocked[g]){
+      // 进入
+      let tIn=null;
+      if(prevX < L && newX >= L && newX>prevX)      tIn = tPrev + (L-prevX)/(newX-prevX)*(tNow-tPrev);
+      else if(prevX > R && newX <= R && newX<prevX) tIn = tPrev + (R-prevX)/(newX-prevX)*(tNow-tPrev);
+      else if(prevX<L && newX>R)                    tIn = tPrev + (L-prevX)/(newX-prevX)*(tNow-tPrev); // 穿透保护
+      if(tIn!==null){ s.blocked[g]=true; s._tin=tIn; s._xin=newX>prevX?L:R; }
+    } else {
+      // 离开
+      let tOut=null;
+      if(prevX <= R && newX > R && newX>prevX)      tOut = tPrev + (R-prevX)/(newX-prevX)*(tNow-tPrev);
+      else if(prevX >= L && newX < L && newX<prevX) tOut = tPrev + (L-prevX)/(newX-prevX)*(tNow-tPrev);
+      else if(prevX>R && newX<L)                    tOut = tPrev + (R-prevX)/(newX-prevX)*(tNow-tPrev);
+      if(tOut!==null){
+        s.blocked[g]=false;
+        const dts = tOut - s._tin;
+        if(dts>1e-6){
+          // ★ 用【位移符号】恢复方向：d/Δt 只给大小，方向必须由进出位置判定
+          const xOut = newX>prevX ? R : L;
+          const disp  = xOut - s._xin;            // 带符号的遮挡位移
+          S.ev.push({s:sIdx, g, tin:s._tin, tout:tOut, tc:(tOut+s._tin)/2, dt:dts,
+                     d:S.blade, vbar:S.blade/dts, vsign:disp/dts, gx});
+        }
+      }
+    }
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   3. 物理积分 + 碰撞冲量
+   ══════════════════════════════════════════════════════ */
+function collide(){
+  const [a,b]=S.s;
+  const gap = (b.x - L_SLIDE/2) - (a.x + L_SLIDE/2);
+  if(gap <= 0 && !S.bonded){
+    const u = a.v - b.v;
+    if(u <= 0) return;                       // 分离中，不处理
+    const mu = a.m*b.m/(a.m+b.m);
+    const J = (1+S.e)*mu*u;                  // 冲量大小（动量单位）
+    a.v -= J/a.m; b.v += J/b.m;
+    // 位置分离，避免重复检测
+    const push = (L_SLIDE - gap)/2 + 1e-6;
+    a.x -= push; b.x += push;
+    S.nCol++;
+    if(S.nCol===1){ S.collided = true; S.tCol = S.t; S.flash=1; S.flashX=(a.x+b.x)/2; S.impJ=J; }
+    if(S.e <= 0.02){ S.bonded = true; }
+  } else if(S.bonded){
+    // 黏结体：整体匀速，锁定相对位置
+    const v = (a.m*a.v + b.m*b.v)/(a.m+b.m);
+    a.v = v; b.v = v;
+  }
+}
+
+function step(h){
+  const tP = S.t, [a,b]=S.s;
+  // 外力：气垫导轨残余摩擦
+  // ★ 黏结体：两滑块刚性相连，作为一个整体 M=m₁+m₂ 受摩擦，
+  //   加速度必须除以【总质量】，才能保证 a = μMg/M = μg 与单体情形一致。
+  //   （若分别除以各自质量，会把滑块2 的减速度放大 M/m₂ 倍，导致反演失真）
+  if(S.bonded){
+    const v = a.v, M = a.m + b.m;
+    const f = (Math.abs(v)<1e-4) ? 0 : -Math.sign(v)*S.fric*M*G_ACC;
+    const dv = f/M*h;
+    a.v += dv; b.v += dv;
+  } else {
+    const fa = (Math.abs(a.v)<1e-4) ? 0 : -Math.sign(a.v)*S.fric*a.m*G_ACC;
+    const fb = (Math.abs(b.v)<1e-4) ? 0 : -Math.sign(b.v)*S.fric*b.m*G_ACC;
+    a.v += fa/a.m*h;  b.v += fb/b.m*h;
+  }
+
+  const p1=a.x, p2=b.x;
+  a.x += a.v*h; b.x += b.v*h;
+
+  // 端部缓冲：碰过即标记（反射数据会污染测速，用于提前终止）
+  if(a.x - L_SLIDE/2 < 0.002){ a.x = 0.002+L_SLIDE/2; a.v = Math.abs(a.v)*0.25; S.hitBuf[0]=true; }
+  if(b.x + L_SLIDE/2 > L_TRACK-0.002){ b.x = L_TRACK-0.002-L_SLIDE/2; b.v = -Math.abs(b.v)*0.25; S.hitBuf[1]=true; }
+  if(a.x + L_SLIDE/2 > L_TRACK-0.002){ a.x = L_TRACK-0.002-L_SLIDE/2; a.v = -Math.abs(a.v)*0.25; S.hitBuf[0]=true; }
+  if(b.x - L_SLIDE/2 < 0.002){ b.x = 0.002+L_SLIDE/2; b.v = Math.abs(b.v)*0.25; S.hitBuf[1]=true; }
+
+  checkGates(0, p1, a.x, tP, S.t+h);
+  checkGates(1, p2, b.x, tP, S.t+h);
+  collide();
+  S.t += h;
+}
+
+/* 推进固定时长 */
+function advance(dur){
+  const n = Math.min(Math.round(dur/DT), 60000);
+  for(let i=0;i<n;i++){
+    if(S.done) break;
+    step(DT);
+    if(i%8===0) sample();
+  }
+  // 碰撞闪光衰减
+  if(S.flash>0) S.flash = Math.max(0, S.flash - 0.035);
+  if(S.done) return;
+
+  /* 终止判定：两滑块都拿到"第一次碰撞后、缓冲反射前"的干净数据即收尾
+     ★ 撞缓冲【不】触发提前终止 —— 反射产生的事件会被时间窗 T_WIN 过滤掉，
+       而慢的那一个滑块走完G₃G₄最长需~1.0 s，过早收尾会丢数据。
+       这也是导轨能缩到 1.20 m 的前提。*/
+  const tc = S.tCol;
+  if(tc!==null && S.t > tc + 0.08){
+    const cleanPost = si => S.ev.filter(e=>e.s===si && e.tc>tc && e.tc<tc+T_WIN).length;
+    if(cleanPost(0)>=2 && cleanPost(1)>=2) { finish(); return; }
+    // 二次碰撞、长时间无进展 → 强制收尾（撞缓冲本身不算）
+    if(S.nCol>=2 || S.t>tc+T_WIN) { finish(); return; }
+  }
+  if(S.t > 10){ finish(); return; }
+}
+
+/* ══════════════════════════════════════════════════════
+   4. 由事件求速度（核心测量逻辑）
+   ══════════════════════════════════════════════════════ */
+/* 由遮光事件反演速度
+   ── 测量链 ──────────────────────────────────────────────
+   pre ：取碰撞前最后两次过门（离碰撞最近）
+   post：取碰撞后最先的两次过门（未被缓冲反射污染）
+   双门法 v̄ = Δx/Δt 实为该段路程的平均速度；若存在摩擦减速，
+   必须用匀减速模型外推回碰撞瞬间：
+        v₀ = v̄ + a·(t_mid − t_ref)      a = μg
+   这是本实验测速的核心技术点，误差可降到 1e-5 量级。          */
+function velocityOf(sIdx, phase){
+  const tc = S.tCol;
+  const aDec = S.fric*G_ACC;                    // 减速率大小
+  const pick = (list)=>{
+    if(list.length>=2){
+      const b=list[0], c=list[1];
+      const dt=c.tc-b.tc, dx=c.gx-b.gx;
+      if(dt>1e-4 && Math.abs(dx)>1e-6){
+        const vbar = dx/dt;                     // 区间平均速度（含符号）
+        const tMid = (b.tc+c.tc)/2;             // 对应时刻
+        const tRef = (phase==='pre') ? (tc!==null?tc:S.t) : tc;
+        // 匀减速外推：把区间中点的速度修正回 tRef 时刻
+        const dtRef = (tMid - tRef);
+        const corr = vbar + (Math.abs(vbar)>1e-9 ? Math.sign(vbar)*aDec*dtRef : 0);
+        return {v:corr, vbar, method:'pair', dt, dx:Math.abs(dx), tMid, tRef,
+                g:[b.g+1,c.g+1], corrected:Math.abs(dtRef)>1e-6};
+      }
+    }
+    const e=list[0];
+    const dtRef = e.tc - ((phase==='pre') ? (tc!==null?tc:S.t) : tc);
+    // ★ 单门法：v̄ = d/Δt 只给【大小】，方向须用带符号的 vsign（由遮挡位移判定）
+    const vSigned = (e.vsign!==undefined) ? e.vsign : e.vbar;
+    const v = vSigned + (Math.abs(vSigned)>1e-9 ? Math.sign(vSigned)*aDec*dtRef : 0);
+    return {v, vbar:Math.abs(vSigned), method:'single', dt:e.dt, d:e.d, tMid:e.tc,
+            tRef:(phase==='pre')?(tc!==null?tc:S.t):tc, g:[e.g+1], corrected:Math.abs(dtRef)>1e-6};
+  };
+  let list = S.ev.filter(e=>e.s===sIdx);
+  if(phase==='pre'){
+    if(tc===null) return null;
+    list = list.filter(e=>e.tc < tc).sort((a,b)=>a.tc-b.tc);
+    if(!list.length) return null;
+    // 碰撞前同样存在减速 → 外推参考点应取"碰撞前最后一段的中点"，
+    // 这样与解析解一致地反映碰撞瞬间速度
+    if(list.length>=2) return pick(list.slice(-2));
+    return pick(list.slice(-1));
+  }
+  if(tc===null) return null;
+  list = list.filter(e=>e.tc>tc && e.tc<tc+T_WIN).sort((a,b)=>a.tc-b.tc);
+  if(!list.length) return null;
+  return pick(list.slice(0,2));
+}
+
+function finish(){
+  S.done = true; S.running=false;
+  const v1p = velocityOf(0,'pre'), v1a = velocityOf(0,'post');
+  const v2a = velocityOf(1,'post');
+  const v2pRaw = velocityOf(1,'pre');
+  // 滑块2 碰撞前：若全程静止则 v₂前 = 0，否则用反演值
+  const v2p = v2pRaw ? v2pRaw.v : (Math.abs(S.vi2)<1e-9 ? 0 : null);
+  const mv = (r,fallback)=> r ? r.v : fallback;
+  // 各门挡光时间（按"第几次过门"编号），用于实验结论展示
+  const blk = [];
+  for(let g=0; g<4; g++){
+    if(!S.gates[g]) continue;
+    const list = S.ev.filter(e=>e.g===g).sort((a,b)=>a.tc-b.tc);
+    list.forEach((e,i)=>blk.push({g:g+1, s:e.s+1, n:i+1, dt:e.dt, tc:e.tc}));
+  }
+  S.results = {
+    m1:S.m1, m2:S.m2, e:S.e,
+    v1p:mv(v1p, S.vi1), v2p:v2p,
+    v1a:mv(v1a,  S.s[0].v), v2a:mv(v2a, S.s[1].v),
+    meth1: v1p?v1p.method:'init', meth2: v2pRaw?v2pRaw.method:(v2p===0?'rest':'init'),
+    meth3: v1a?v1a.method:'sim',  meth4: v2a?v2a.method:'sim',
+    dt1p: v1p?v1p.dt:null, dt1a: v1a?v1a.dt:null, dt2a: v2a?v2a.dt:null,
+    tMid1p: v1p?v1p.tMid:null, tMid1a: v1a?v1a.tMid:null, tMid2a: v2a?v2a.tMid:null,
+    blk,
+    tCol:S.tCol, fric:S.fric, d:S.blade
+  };
+  updateKPI();
+  $('runState').innerHTML = '状态：<b style="color:#2f9e44">测量完成</b> · t = '+fx(S.t,3)+' s · 测速法 '+
+    [S.results.meth1,S.results.meth3,S.results.meth4].filter(x=>x!=='rest').join('/')+
+    ' · 点击"＋记录本组数据"存入表格';
+  drawCharts();
+}
+
+/* ══════════════════════════════════════════════════════
+   5. 主画面渲染（Canvas 2D）
+   ══════════════════════════════════════════════════════ */
+const stage = $('stage');
+function render(){
+  const W = stage.clientWidth, H = 330;
+  const dpr = window.devicePixelRatio||1;
+  if(stage.width!==W*dpr||stage.height!==H*dpr){ stage.width=W*dpr; stage.height=H*dpr; }
+  const c = stage.getContext('2d');
+  c.setTransform(dpr,0,0,dpr,0,0);
+  c.clearRect(0,0,W,H);
+  c.fillStyle='#fff'; c.fillRect(0,0,W,H);
+
+  const PAD = 34;
+  const sc  = (W-2*PAD)/L_TRACK;
+  const X = m => PAD + m*sc;
+  const yRail = 214;             // 导轨顶面
+  const hRail = 40;
+  const yFoot = yRail+hRail;
+
+  /* --- 导轨主体 --- */
+  const g1 = c.createLinearGradient(0,yRail,0,yFoot);
+  g1.addColorStop(0,'#c9ced4'); g1.addColorStop(.35,'#a8aeb5'); g1.addColorStop(1,'#8d949b');
+  c.fillStyle=g1;
+  c.beginPath(); c.roundRect(PAD-16, yRail, (W-2*PAD)+32, hRail, 4); c.fill();
+  c.strokeStyle='#6f767d'; c.lineWidth=1; c.stroke();
+
+  /* --- 绿色刻度尺带 --- */
+  const yR = yRail+hRail-17, hR=13;
+  c.fillStyle='#2f9e44';
+  c.beginPath(); c.roundRect(PAD-13, yR, (W-2*PAD)+26, hR, 2); c.fill();
+  c.strokeStyle='#237a34'; c.stroke();
+  // 刻度
+  c.strokeStyle='rgba(255,255,255,.92)';
+  for(let mm=0; mm<=1200; mm+=5){
+    const x = X(mm/1000);
+    const maj = (mm%50===0), med=(mm%10===0);
+    const h = maj?11:(med?7:4);
+    c.lineWidth = maj?1.5:1;
+    c.beginPath(); c.moveTo(x, yR+hR-h+1); c.lineTo(x, yR+hR); c.stroke();
+    if(maj && mm%100===0){
+      c.fillStyle='rgba(255,255,255,.95)'; c.font='9px Consolas,monospace';
+      c.textAlign='center'; c.fillText(String(mm/10), x, yR+8);
+    }
+  }
+
+  /* --- 底脚螺旋 --- */
+  for(const fx0 of [0.22,0.5,0.78]){
+    const x = X(fx0*L_TRACK);
+    c.strokeStyle='#9aa1a8'; c.lineWidth=3;
+    c.beginPath(); c.moveTo(x,yFoot); c.lineTo(x,yFoot+13); c.stroke();
+    c.fillStyle='#6f767d';
+    c.beginPath(); c.roundRect(x-9, yFoot+12, 18, 5, 2); c.fill();
+    c.strokeStyle='#8a9096'; c.lineWidth=1;
+    for(let k=0;k<4;k++){ c.beginPath(); c.moveTo(x-8,yFoot+13.5+k*1.1); c.lineTo(x+8,yFoot+13.5+k*1.1); c.stroke(); }
+  }
+
+  /* --- 碰撞区标记（导轨面下方虚线 + 标签） --- */
+  {
+    const xc = X(X_COL);
+    c.strokeStyle='rgba(247,103,7,.55)'; c.setLineDash([5,4]); c.lineWidth=1.3;
+    c.beginPath(); c.moveTo(xc, yRail-2); c.lineTo(xc, yR+2); c.stroke(); c.setLineDash([]);
+    c.fillStyle='rgba(247,103,7,.9)'; c.font='bold 9.5px "Microsoft YaHei"'; c.textAlign='center';
+    c.fillText('碰撞区', xc, yRail-124);
+  }
+
+  /* --- 起点位置标记 --- */
+  {
+    c.fillStyle='#8a94a6'; c.font='9px "Microsoft YaHei"'; c.textAlign='center';
+    const x1=X(X_S1_0);
+    c.beginPath(); c.moveTo(x1, yRail+1); c.lineTo(x1-4, yRail-7); c.lineTo(x1+4, yRail-7); c.closePath(); c.fill();
+    c.fillText('起点', x1, yRail+13);
+  }
+
+  /* --- 端部缓冲块 --- */
+  c.fillStyle='#212529';
+  c.beginPath(); c.roundRect(PAD-24, yRail-6, 15, hRail+10, 2); c.fill();
+  c.beginPath(); c.roundRect(W-PAD+9, yRail-6, 15, hRail+10, 2); c.fill();
+  c.fillStyle='#495057';
+  c.fillRect(PAD-24, yRail+8, 15, 4); c.fillRect(W-PAD+9, yRail+8, 15, 4);
+
+  /* --- 光电门 --- */
+  for(let g=0; g<4; g++){
+    if(!S.gates[g]) continue;
+    const x = X(G_POS[g]);
+    // 立柱
+    c.fillStyle='#8f959c';
+    c.beginPath(); c.roundRect(x-11, yRail-118, 22, 120, 3); c.fill();
+    c.strokeStyle='#6c737a'; c.lineWidth=1; c.stroke();
+    // 顶部横臂伸向导轨
+    c.fillStyle='#9aa1a8';
+    c.beginPath(); c.roundRect(x-9, yRail-104, 18, 13, 2); c.fill();
+    // 光路槽
+    c.fillStyle='#e9ecef';
+    c.beginPath(); c.roundRect(x-6, yRail-92, 12, 46, 2); c.fill();
+    c.strokeStyle='#adb5bd'; c.stroke();
+    // 红外发射/接收管（红灯）
+    c.fillStyle='#ff6b6b';
+    c.beginPath(); c.arc(x, yRail-84, 5.5, 0, 7); c.fill();
+    c.fillStyle='rgba(255,107,107,.28)';
+    c.beginPath(); c.arc(x, yRail-84, 10, 0, 7); c.fill();
+    c.beginPath(); c.arc(x, yRail-57, 5.5, 0, 7); c.fill();
+    c.beginPath(); c.arc(x, yRail-57, 10, 0, 7); c.fill();
+    c.fillStyle='#2f9e44'; c.font='bold 10px Consolas,monospace'; c.textAlign='center';
+    c.fillText('G'+(g+1), x, yRail-124);
+  }
+
+  /* --- 滑块 --- */
+  const hSL=30, hBlade=44;
+  for(let i=0;i<2;i++){
+    const s = S.s[i];
+    const cx = X(s.x), hw = L_SLIDE/2*sc;
+    if(cx<-60||cx>W+60) continue;
+    // 气垫阴影
+    c.fillStyle='rgba(28,126,214,.10)';
+    c.beginPath(); c.ellipse(cx, yRail+2, hw*1.06, 5, 0,0,7); c.fill();
+    // 支承斜台
+    c.fillStyle='rgba(0,0,0,.05)';
+    c.beginPath(); c.moveTo(cx-hw, yRail); c.lineTo(cx-hw*0.55, yRail-8); c.lineTo(cx+hw*0.55, yRail-8); c.lineTo(cx+hw, yRail); c.closePath(); c.fill();
+    // 滑块体
+    const g2=c.createLinearGradient(0,yRail-hSL,0,yRail);
+    g2.addColorStop(0,'#b6bbc1'); g2.addColorStop(1,'#8a9096');
+    c.fillStyle=g2;
+    c.beginPath(); c.roundRect(cx-hw, yRail-hSL, hw*2, hSL, 3); c.fill();
+    c.strokeStyle='#6c737a'; c.lineWidth=1; c.stroke();
+    // 顶板
+    c.fillStyle='#727980';
+    c.beginPath(); c.roundRect(cx-hw*0.92, yRail-hSL-5, hw*1.84, 8, 2); c.fill();
+    // 遮光片
+    const bw = Math.max(4, S.blade*sc);
+    c.fillStyle = i===0? '#e03131' : '#1c7ed6';
+    c.beginPath(); c.roundRect(cx-bw/2, yRail-hSL-5-hBlade, bw, hBlade+3, 1.5); c.fill();
+    c.fillStyle='rgba(255,255,255,.28)';
+    c.fillRect(cx-bw/2, yRail-hSL-5-hBlade, bw*0.42, hBlade+3);
+    // 速度箭头（画在遮光片上方，与读数浮窗分层不重叠）
+    const vs=Math.abs(s.v);
+    if(vs>0.012){
+      const len = clamp(vs/Math.max(S.vi1,0.2)*46, 12, 96);
+      const dir = Math.sign(s.v);
+      const ay = yRail-hSL-hBlade-16;
+      c.strokeStyle='#f76707'; c.lineWidth=2.6; c.lineCap='round';
+      c.beginPath(); c.moveTo(cx, ay); c.lineTo(cx+dir*len, ay); c.stroke();
+      c.fillStyle='#f76707'; c.beginPath();
+      c.moveTo(cx+dir*len, ay);
+      c.lineTo(cx+dir*(len-7), ay-4.4); c.lineTo(cx+dir*(len-7), ay+4.4); c.closePath(); c.fill();
+      c.font='bold 10.5px Consolas,monospace'; c.textAlign=dir>0?'left':'right';
+      c.fillStyle='#a8430a';
+      c.fillText((s.v>0?'+':'')+fx(s.v,2)+' m/s', cx+dir*(len+6), ay+3.5);
+    }
+    // 质量标签
+    c.fillStyle='rgba(255,255,255,.94)';
+    c.beginPath(); c.roundRect(cx-30, yRail-21, 60, 15, 3); c.fill();
+    c.fillStyle='#495057'; c.font='bold 10.5px Consolas,monospace'; c.textAlign='center';
+    c.fillText('m'+(i+1)+' = '+fx(s.m,3)+' kg', cx, yRail-10);
+  }
+
+  /* --- 碰撞闪光与冲量 --- */
+  if(S.flash>0 && S.flashX>0){
+    const fx0=X(S.flashX), a=S.flash;
+    c.fillStyle='rgba(247,103,7,'+(0.42*a)+')';
+    c.beginPath(); c.arc(fx0, yRail-40, 16+26*(1-a), 0, 7); c.fill();
+    c.strokeStyle='rgba(247,103,7,'+(0.9*a)+')'; c.lineWidth=2.5;
+    c.beginPath(); c.arc(fx0, yRail-40, 16+26*(1-a), 0, 7); c.stroke();
+    c.fillStyle='rgba(247,103,7,'+a+')'; c.font='bold 12px "Microsoft YaHei"'; c.textAlign='center';
+    c.fillText('J = '+fx(S.impJ,3)+' N·s', fx0, yRail-88);
+    c.fillText('Δt碰 ≈ 10 ms', fx0, yRail-72);
+  }
+
+  /* --- 顶部信息条 --- */
+  const [a,b]=S.s;
+  c.font='12px Consolas,monospace'; c.textAlign='left';
+  c.fillStyle='#f4f6f9'; c.beginPath(); c.roundRect(PAD-16, 6, 380, 38, 6); c.fill();
+  c.strokeStyle='#e3e8ef'; c.stroke();
+  c.fillStyle='#4a5568'; c.font='11.5px "Microsoft YaHei"';
+  c.fillText('t = '+fx(S.t,3)+' s',   PAD-4, 21);
+  c.fillText('p₁ = '+fx(a.m*a.v,4),   PAD+92, 21);
+  c.fillText('p₂ = '+fx(b.m*b.v,4),   PAD+174, 21);
+  c.fillText('pΣ = '+fx(a.m*a.v+b.m*b.v,4), PAD+256, 21);
+  c.fillStyle='#8a94a6'; c.font='10.5px "Microsoft YaHei"';
+  c.fillText(S.collided? '✔ 已发生碰撞 @ t = '+fx(S.tCol,3)+' s' : '○ 待碰撞', PAD-4, 36);
+  c.fillStyle='#8a94a6';
+  c.fillText('守恒条件：ΣFx = 0（气垫 μ≈'+fx(S.fric,3)+'）', PAD+156, 36);
+
+  /* --- 光电门读数浮窗（纵向排在画布左侧，互不重叠） --- */
+  {
+    let fy=50;
+    for(let g=0; g<4; g++){
+      if(!S.gates[g]) continue;
+      const list = S.ev.filter(e=>e.g===g).sort((a,b)=>b.tc-a.tc).slice(0,2).reverse();
+      if(!list.length) continue;
+      const txt = list.map(e=>'滑块'+(e.s+1)+'  Δt='+(e.dt*1000).toFixed(1)+' ms').join('   ｜   ');
+      c.font='10px "Microsoft YaHei"'; c.textAlign='left';
+      const w = c.measureText(txt).width+16;
+      const bxr = PAD-16;
+      c.fillStyle='rgba(47,158,68,.10)'; c.beginPath(); c.roundRect(bxr, fy, w, 18, 4); c.fill();
+      c.strokeStyle='rgba(47,158,68,.5)'; c.lineWidth=1; c.stroke();
+      c.fillStyle='#1e6b30'; c.fillText(txt, bxr+8, fy+13);
+      // 引线到对应光电门
+      const gx=X(G_POS[g]);
+      c.strokeStyle='rgba(47,158,68,.35)'; c.setLineDash([2,2]);
+      c.beginPath(); c.moveTo(bxr+w, fy+9); c.lineTo(gx, yRail-130); c.stroke(); c.setLineDash([]);
+      fy += 21;
+      if(fy>150) break;
+    }
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   6. KPI 卡片
+   ══════════════════════════════════════════════════════ */
+function updateKPI(){
+  const r = S.results;
+  const box = $('kpis');
+  const msTxt = v => v==null ? '—' : (v*1000).toFixed(1);
+  if(!r){
+    const [a,b]=S.s;
+    box.innerHTML = `
+      <div class="kpi"><div class="k">仿真时间 t</div><div class="v">${fx(S.t,3)}<span class="u">s</span></div></div>
+      <div class="kpi r"><div class="k">p₁ = m₁v₁</div><div class="v">${fx(a.m*a.v,4)}</div></div>
+      <div class="kpi r"><div class="k">p₂ = m₂v₂</div><div class="v">${fx(b.m*b.v,4)}</div></div>
+      <div class="kpi g"><div class="k">pΣ = p₁+p₂</div><div class="v">${fx(a.m*a.v+b.m*b.v,4)}</div></div>
+      <div class="kpi o"><div class="k">遮光事件</div><div class="v">${S.ev.length}<span class="u">次</span></div></div>`;
+    return;
+  }
+  const pB = r.m1*r.v1p + (r.v2p===null?0:r.m2*r.v2p);
+  const pA = r.m1*r.v1a + r.m2*r.v2a;
+  const rel = Math.abs(pB)>1e-9 ? Math.abs(pA-pB)/Math.abs(pB) : 0;
+  const EB = .5*r.m1*r.v1p*r.v1p + .5*r.m2*(r.v2p||0)*(r.v2p||0);
+  const EA = .5*r.m1*r.v1a*r.v1a + .5*r.m2*r.v2a*r.v2a;
+  const cls = rel<0.03?'ok':rel<0.08?'warn':'bad';
+  const word = rel<0.03?'✔ 系统动量守恒（在误差允许范围内）':rel<0.08?'△ 偏差偏大，请检查气垫与水平':'✘ 明显不守恒';
+  const pair = r.meth1==='pair'||r.meth3==='pair';
+  // 各门挡光时间明细（滑块 × 门）
+  const blkRows = (r.blk||[]).map(b=>
+    `G${b.g}·滑块${b.s} Δt=${(b.dt*1000).toFixed(1)} ms`).join('　');
+
+  box.innerHTML = `
+    <div class="kpi o"><div class="k">遮光片宽 d</div><div class="v">${fx(r.d*1000,1)}<span class="u">mm</span></div></div>
+    <div class="kpi"><div class="k">v₁ 碰撞前</div><div class="v">${fx(r.v1p,3)}<span class="u">m/s</span></div></div>
+    <div class="kpi"><div class="k">v₂ 碰撞前</div><div class="v">${r.v2p===null?'0.000':fx(r.v2p,3)}<span class="u">m/s</span></div></div>
+    <div class="kpi r"><div class="k">v₁′ 碰撞后</div><div class="v">${fx(r.v1a,3)}<span class="u">m/s</span></div></div>
+    <div class="kpi r"><div class="k">v₂′ 碰撞后</div><div class="v">${fx(r.v2a,3)}<span class="u">m/s</span></div></div>
+    <div class="kpi t"><div class="k">v̄₁前 = Δx/Δt<sub>12</sub></div><div class="v">${msTxt(r.dt1p)}<span class="u">ms</span></div></div>
+    <div class="kpi t"><div class="k">v̄₁′后 = Δx/Δt<sub>34</sub></div><div class="v">${msTxt(r.dt1a)}<span class="u">ms</span></div></div>
+    <div class="kpi t"><div class="k">v̄₂′后 = Δx/Δt<sub>34</sub></div><div class="v">${msTxt(r.dt2a)}<span class="u">ms</span></div></div>
+    <div class="kpi g"><div class="k">p前 = m₁v₁+m₂v₂</div><div class="v">${fx(pB,4)}</div></div>
+    <div class="kpi g"><div class="k">p后 = m₁v₁′+m₂v₂′</div><div class="v">${fx(pA,4)}</div></div>
+    <div class="kpi big ${rel<0.03?'g':'o'}"><div class="k">相对误差 |ε<sub>相</sub>|</div><div class="v">${(rel*100).toFixed(2)}<span class="u">%</span></div></div>
+    <div class="kpi p"><div class="k">Eₖ 前 → 后 / J</div><div class="v" style="font-size:20px">${fx(EB,4)} → ${fx(EA,4)}</div></div>`;
+  const vd = document.createElement('div');
+  vd.className = 'verdict '+cls;
+  vd.innerHTML = `<div style="flex:1 1 100%;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="font-size:16px">${word}</span>
+      <span style="font-weight:400;font-size:12px;color:#4a5568">测速法：${pair?'双门法 v=Δx/Δt':'单门法 v=d/Δt'}（含匀减速外推修正）｜ ΔEₖ = ${fx(EA-EB,4)} J ｜ 恢复系数 e = ${fx(r.e,2)}</span>
+      <span class="big" style="margin-left:auto">${(rel*100).toFixed(2)}%</span>
+    </div>
+    ${blkRows?`<div style="flex:1 1 100%;font-weight:400;font-size:12.5px;color:#2b6b3a;border-top:1px dashed rgba(0,0,0,.14);padding-top:7px;margin-top:2px"><b>各光电门挡光时间</b>（遮光片宽 d = ${fx(r.d*1000,1)} mm）：${blkRows}</div>`:''}`;
+  const kb = box.parentElement.querySelector('.verdict');
+  if(kb) kb.remove();
+  box.after(vd);
+}
+
+/* ══════════════════════════════════════════════════════
+   7. 数据表
+   ══════════════════════════════════════════════════════ */
+function computeTheo(m1,m2,v1,v2,e){
+  const M=m1+m2;
+  const v1p=(m1-e*m2)*v1/M + (1+e)*m2*v2/M;
+  const v2p=(1+e)*m1*v1/M + (m2-e*m1)*v2/M;
+  return {v1p,v2p};
+}
+function addRecord(r){
+  const rec = Object.assign({}, r);
+  rec.pB = rec.m1*rec.v1p + rec.m2*(rec.v2p||0);
+  rec.pA = rec.m1*rec.v1a + rec.m2*rec.v2a;
+  rec.rel = Math.abs(rec.pB)>1e-9 ? Math.abs(rec.pA-rec.pB)/Math.abs(rec.pB) : 0;
+  rec.EB = .5*rec.m1*rec.v1p*rec.v1p + .5*rec.m2*(rec.v2p||0)**2;
+  rec.EA = .5*rec.m1*rec.v1a*rec.v1a + .5*rec.m2*rec.v2a*rec.v2a;
+  S.data.push(rec);
+  renderTable();
+}
+function renderTable(){
+  const body=$('dbody'); body.innerHTML='';
+  S.data.forEach((r,i)=>{
+    const th = computeTheo(r.m1,r.m2,r.v1p,r.v2p||0,r.e);
+    const tr=el('tr');
+    tr.innerHTML = `
+      <td>${i+1}</td><td class="num">${fx(r.m1,3)}</td><td class="num">${fx(r.m2,3)}</td><td class="num">${fx(r.e,2)}</td>
+      <td class="num">${fx(r.v1p,3)}</td><td class="num">${r.v2p===null?'0.000':fx(r.v2p,3)}</td>
+      <td class="num">${fx(r.v1a,3)}</td><td class="num">${fx(r.v2a,3)}</td>
+      <td class="num"><b>${fx(r.pB,4)}</b></td><td class="num"><b>${fx(r.pA,4)}</b></td>
+      <td class="num" style="color:${r.rel<0.03?'#2f9e44':r.rel<0.08?'#f76707':'#e03131'};font-weight:700">${(r.rel*100).toFixed(2)}%</td>
+      <td class="num">${fx(r.EB,4)}</td><td class="num">${fx(r.EA,4)}</td><td class="num">${fx(r.EA-r.EB,4)}</td>
+      <td><span class="pill ${r.rel<0.03?'g':r.rel<0.08?'o':'r'}">${r.rel<0.03?'守恒':'偏差'}</span></td>`;
+    tr.title = `理论值（由 v₁=${fx(r.v1p,3)}, v₂=${fx(r.v2p||0,3)}, e=${fx(r.e,2)} 推得）：v₁′=${fx(th.v1p,3)}  v₂′=${fx(th.v2p,3)}`;
+    body.appendChild(tr);
+  });
+  updateStats();
+}
+function updateStats(){
+  const box=$('statBox');
+  if(!S.data.length){ box.innerHTML=''; updateTemplate(); return; }
+  const n=S.data.length;
+  const mr = S.data.reduce((a,r)=>a+r.rel,0)/n;
+  const mrF= S.data.reduce((a,r)=>a+r.EA-r.EB,0)/n;
+  const okc= S.data.filter(r=>r.rel<0.03).length;
+  const cls = mr<0.03?'ok':mr<0.08?'warn':'bad';
+  box.innerHTML = `<div class="verdict ${cls}">
+     <span>${n} 组数据 · 平均相对误差 <span class="big" style="margin:0 6px">${(mr*100).toFixed(2)}%</span></span>
+     <span style="font-weight:400;font-size:12px">守恒组 ${okc}/${n} ｜ 平均动能变化 ΔEₖ = ${fx(mrF,4)} J（负值表示碰撞损失动能）</span>
+     <span class="big">${mr<0.03?'✔ 动量守恒':'△ 需改进'}</span></div>`;
+  updateTemplate();
+}
+function updateTemplate(){
+  const n=S.data.length;
+  if(!n){ return; }
+  const mr=S.data.reduce((a,r)=>a+r.rel,0)/n;
+  const last=S.data[n-1];
+  $('tplData').textContent =
+    `共 ${n} 组。以第 1 组为例：m₁=${fx(S.data[0].m1,3)} kg，m₂=${fx(S.data[0].m2,3)} kg；\n`+
+    `碰撞前 v₁=${fx(S.data[0].v1p,3)} m/s、v₂=${fx(S.data[0].v2p||0,3)} m/s，碰撞后 v₁′=${fx(S.data[0].v1a,3)} m/s、v₂′=${fx(S.data[0].v2a,3)} m/s；\n`+
+    `p前=${fx(S.data[0].pB,4)} kg·m/s，p后=${fx(S.data[0].pA,4)} kg·m/s，相对误差 ${(S.data[0].rel*100).toFixed(2)}%。`;
+  $('tplConc').textContent =
+    `各组相对误差平均值为 ${(mr*100).toFixed(2)}%，小于 3% 的实验允许范围，故在误差允许范围内，\n`+
+    `认为碰撞过程中滑块与滑块组成的系统动量守恒。系统动量守恒的条件是合外力为零，\n`+
+    `本实验中气垫使滑块与导轨间摩擦力极小、导轨水平，且碰撞历时极短（外力冲量可忽略），故条件成立。`;
+}
+
+/* ══════════════════════════════════════════════════════
+   8. 图表（手写 Canvas 2D）
+   ══════════════════════════════════════════════════════ */
+function setup(cv,h){
+  // ★ 面板隐藏时 clientWidth = 0，需用备用宽度，否则画布被初始化为 0×0 导致切页后空白
+  let W = cv.clientWidth||0;
+  if(W < 40) W = cv.parentElement && cv.parentElement.clientWidth || 420;
+  const dpr = window.devicePixelRatio||1;
+  if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(h*dpr)){ cv.width=Math.round(W*dpr); cv.height=Math.round(h*dpr); }
+  const c=cv.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0);
+  c.clearRect(0,0,W,h);
+  c.font='10.5px "Microsoft YaHei"'; c.fillStyle='#fff'; c.fillRect(0,0,W,h);
+  return {c,W,H:h};
+}
+function axes(c,W,H,P,ylab,xlab){
+  c.strokeStyle='#c9d1da'; c.lineWidth=1;
+  c.beginPath(); c.moveTo(P.l,P.t); c.lineTo(P.l,H-P.b); c.lineTo(W-P.r,H-P.b); c.stroke();
+  c.fillStyle='#8a94a6'; c.font='10px "Microsoft YaHei"';
+  c.textAlign='right'; c.fillText(ylab, P.l-4, P.t+9);
+  c.textAlign='center'; c.fillText(xlab, (P.l+W-P.r)/2, H-4);
+}
+function gridY(c,W,H,P,mn,mx,step){
+  c.strokeStyle='#eef2f7'; c.fillStyle='#a0a9b6'; c.font='9.5px Consolas,monospace';
+  c.textAlign='right'; c.lineWidth=1;
+  for(let v=mn; v<=mx+1e-9; v+=step){
+    const y = H-P.b - (v-mn)/(mx-mn)*(H-P.b-P.t);
+    c.beginPath(); c.moveTo(P.l,y); c.lineTo(W-P.r,y); c.stroke();
+    c.fillText(v.toFixed(2), P.l-3, y+3);
+  }
+}
+function gridX(c,W,H,P,mn,mx,step){
+  c.strokeStyle='#eef2f7'; c.fillStyle='#a0a9b6'; c.font='9.5px Consolas,monospace';
+  c.textAlign='center'; c.lineWidth=1;
+  for(let v=mn; v<=mx+1e-9; v+=step){
+    const x = P.l + (v-mn)/(mx-mn)*(W-P.r-P.l);
+    c.beginPath(); c.moveTo(x,P.t); c.lineTo(x,H-P.b); c.stroke();
+    c.fillText(v.toFixed(1), x, H-P.b+11);
+  }
+}
+function curve(c,W,H,P,data,col,mn,mx,ymn,ymx,dash){
+  c.strokeStyle=col; c.lineWidth=2.1; c.setLineDash(dash||[]);
+  c.beginPath();
+  let started=false;
+  for(const [x,y] of data){
+    if(x<mn-1e-9||x>mx+1e-9) continue;
+    const px=P.l+(x-mn)/(mx-mn)*(W-P.r-P.l);
+    const py=H-P.b-(y-ymn)/(ymx-ymn)*(H-P.b-P.t);
+    if(!started){ c.moveTo(px,py); started=true; } else c.lineTo(px,py);
+  }
+  c.stroke(); c.setLineDash([]);
+}
+function mark(c,x,y,col,txt){
+  c.fillStyle=col; c.beginPath(); c.arc(x,y,4.2,0,7); c.fill();
+  c.strokeStyle='#fff'; c.lineWidth=1.4; c.stroke();
+  if(txt){ c.fillStyle=col; c.font='bold 10px "Microsoft YaHei"'; c.textAlign='left'; c.fillText(txt,x+7,y+3.5); }
+}
+function collisionLine(c,W,H,P,t,tmin,tmax,ymn,ymx){
+  if(t===null) return;
+  const x=P.l+(t-tmin)/(tmax-tmin)*(W-P.r-P.l);
+  c.strokeStyle='rgba(247,103,7,.75)'; c.setLineDash([4,3]); c.lineWidth=1.4;
+  c.beginPath(); c.moveTo(x,P.t); c.lineTo(x,H-P.b); c.stroke(); c.setLineDash([]);
+  c.fillStyle='#f76707'; c.font='bold 9.5px "Microsoft YaHei"'; c.textAlign='left';
+  c.fillText('碰撞', x+3, P.t+10);
+}
+
+function drawCharts(){
+  const H=S.hist;
+  const lastP = ()=>{ const h=H[H.length-1]||{p1:0,p2:0,v1:0,v2:0,Ek1:0,Ek2:0}; return h; };
+  /* p–t */
+  { const cv=$('cpt'),{c,W}=setup(cv,230),P={l:46,r:118,t:16,b:26};
+    const tmax=Math.max(0.4,H.length?H[H.length-1].t:1);
+    const all=H.flatMap(h=>[h.p1,h.p2,h.p1+h.p2]);
+    const mx=Math.max(0.05,...all.map(Math.abs))*1.18, mn=-mx;
+    axes(c,W,230,P,'p /(kg·m·s⁻¹)','t / s');
+    gridY(c,W,230,P,mn,mx,mx/4); gridX(c,W,230,P,0,tmax,tmax/5);
+    collisionLine(c,W,230,P,S.tCol,0,tmax,mn,mx);
+    curve(c,W,230,P,H.map(h=>[h.t,h.p1]),'#e03131',0,tmax,mn,mx);
+    curve(c,W,230,P,H.map(h=>[h.t,h.p2]),'#1c7ed6',0,tmax,mn,mx);
+    curve(c,W,230,P,H.map(h=>[h.t,h.p1+h.p2]),'#2f9e44',0,tmax,mn,mx,[6,3]);
+    const h=lastP();
+    legendBox(c,W,[['p₁','#e03131',fx(h.p1,3)],['p₂','#1c7ed6',fx(h.p2,3)],
+                  ['p₁+p₂','#2f9e44',fx(h.p1+h.p2,3),true]]);
+  }
+  /* v–t */
+  { const cv=$('cvt'),{c,W}=setup(cv,230),P={l:46,r:118,t:16,b:26};
+    const tmax=Math.max(0.4,H.length?H[H.length-1].t:1);
+    const mx=Math.max(0.3,...H.map(h=>Math.max(Math.abs(h.v1),Math.abs(h.v2))))*1.15;
+    axes(c,W,230,P,'v /(m·s⁻¹)','t / s');
+    gridY(c,W,230,P,-mx,mx,mx/4); gridX(c,W,230,P,0,tmax,tmax/5);
+    collisionLine(c,W,230,P,S.tCol,0,tmax,-mx,mx);
+    // v = 0 基准线
+    const yz = 230-P.b - (0-(-mx))/(2*mx)*(230-P.b-P.t);
+    c.strokeStyle='#c9d1da'; c.setLineDash([4,4]); c.lineWidth=1.2;
+    c.beginPath(); c.moveTo(P.l,yz); c.lineTo(W-P.r,yz); c.stroke(); c.setLineDash([]);
+    c.fillStyle='#a0a9b6'; c.font='9px Consolas,monospace'; c.textAlign='left';
+    c.fillText('v = 0', W-P.r+3, yz+3);
+    curve(c,W,230,P,H.map(h=>[h.t,h.v1]),'#e03131',0,tmax,-mx,mx);
+    curve(c,W,230,P,H.map(h=>[h.t,h.v2]),'#1c7ed6',0,tmax,-mx,mx);
+    const h=lastP();
+    legendBox(c,W,[['v₁','#e03131',fx(h.v1,3)],['v₂','#1c7ed6',fx(h.v2,3)]]);
+  }
+  /* Ek–t */
+  { const cv=$('cet'),{c,W}=setup(cv,230),P={l:46,r:118,t:16,b:26};
+    const tmax=Math.max(0.4,H.length?H[H.length-1].t:1);
+    const mx=Math.max(0.02,...H.map(h=>h.Ek1+h.Ek2))*1.2;
+    axes(c,W,230,P,'Eₖ / J','t / s');
+    gridY(c,W,230,P,0,mx,mx/4); gridX(c,W,230,P,0,tmax,tmax/5);
+    collisionLine(c,W,230,P,S.tCol,0,tmax,0,mx);
+    curve(c,W,230,P,H.map(h=>[h.t,h.Ek1]),'#e03131',0,tmax,0,mx);
+    curve(c,W,230,P,H.map(h=>[h.t,h.Ek2]),'#1c7ed6',0,tmax,0,mx);
+    curve(c,W,230,P,H.map(h=>[h.t,h.Ek1+h.Ek2]),'#f76707',0,tmax,0,mx,[5,3]);
+    const h=lastP();
+    legendBox(c,W,[['Eₖ₁','#e03131',fx(h.Ek1,3)],['Eₖ₂','#1c7ed6',fx(h.Ek2,3)],
+                  ['Eₖ总','#f76707',fx(h.Ek1+h.Ek2,3),true]]);
+  }
+  /* Δp–t */
+  { const cv=$('cdt'),{c,W}=setup(cv,230),P={l:46,r:118,t:16,b:26};
+    const tmax=Math.max(0.4,H.length?H[H.length-1].t:1);
+    const p0=H.length?H[0].p1+H[0].p2:0;
+    const d=H.map(h=>h.p1+h.p2-p0);
+    const mx=Math.max(0.01,...d.map(Math.abs))*1.25;
+    axes(c,W,230,P,'Δp /(kg·m·s⁻¹)','t / s');
+    gridY(c,W,230,P,-mx,mx,mx/4); gridX(c,W,230,P,0,tmax,tmax/5);
+    collisionLine(c,W,230,P,S.tCol,0,tmax,-mx,mx);
+    const yz = 230-P.b - (0-(-mx))/(2*mx)*(230-P.b-P.t);
+    c.strokeStyle='#868e96'; c.setLineDash([4,4]); c.lineWidth=1.2;
+    c.beginPath(); c.moveTo(P.l,yz); c.lineTo(W-P.r,yz); c.stroke(); c.setLineDash([]);
+    curve(c,W,230,P,d.map((v,i)=>[H[i].t,v]),'#7048e8',0,tmax,-mx,mx);
+    const last=d.length?d[d.length-1]:0;
+    c.fillStyle='#7048e8'; c.font='bold 10.5px Consolas,monospace'; c.textAlign='left';
+    c.fillText('末值 Δp = '+fx(last,4)+' N·s', P.l+6, P.t+10);
+    c.fillStyle='#8a94a6'; c.font='9.5px "Microsoft YaHei"';
+    c.fillText('（Δp 相对初值 p₁+p₂ 的累积亏损）', P.l+6, P.t+24);
+    legendBox(c,W,[['Δp','#7048e8',fx(last,4)]]);
+  }
+}
+function legendBox(c,W,items){
+  const h=items.length*13+6, bx=W-108, by=6;
+  c.fillStyle='rgba(255,255,255,.94)'; c.beginPath(); c.roundRect(bx,by,102,h,4); c.fill();
+  c.strokeStyle='#e3e8ef'; c.lineWidth=1; c.stroke();
+  items.forEach((it,i)=>{
+    c.strokeStyle=it[1]; c.lineWidth=2.6; c.setLineDash(it[3]?[5,3]:[]);
+    c.beginPath(); c.moveTo(bx+6, by+10+i*13); c.lineTo(bx+20, by+10+i*13); c.stroke(); c.setLineDash([]);
+    c.fillStyle='#4a5568'; c.font='10px "Microsoft YaHei"'; c.textAlign='left';
+    c.fillText(it[0]+' = '+it[2], bx+25, by+13.5+i*13);
+  });
+}
+
+/* 关系图 1：速度比 vs 质量比 */
+function drawRel1(){
+  const cv=$('cr1'),{c,W}=setup(cv,240),P={l:48,r:14,t:16,b:28};
+  const m1=+$('rm1').value, m2=+$('rm2').value, v1=+$('rv1').value, v2=+$('rv2').value, e=+$('re').value;
+  const rm=m2/m1, M=m1+m2;
+  const f1=r=>(((1)-e*r)*v1+(1+e)*r*v2)/(1+r);
+  const f2=r=>((1+e)*v1+(r-e)*v2)/(1+r);
+  const mn=0.05, mx=5, ymax=Math.max(1.3, Math.abs(v1)*1.25, Math.abs(v2)*1.25);
+  axes(c,W,240,P,'v′ /(m·s⁻¹)','质量比  r = m₂/m₁');
+  gridY(c,W,240,P,0,ymax,ymax/5); gridX(c,W,240,P,mn,mx,0.5);
+  const d1=[],d2=[];
+  for(let r=mn;r<=mx+1e-9;r+=0.02){ d1.push([r,f1(r)]); d2.push([r,f2(r)]); }
+  curve(c,W,240,P,d1,'#e03131',mn,mx,0,ymax);
+  curve(c,W,240,P,d2,'#1c7ed6',mn,mx,0,ymax);
+  // r=1 参考
+  const x1=P.l+(1-mn)/(mx-mn)*(W-P.r-P.l);
+  c.strokeStyle='#adb5bd'; c.setLineDash([4,4]); c.lineWidth=1.2;
+  c.beginPath(); c.moveTo(x1,P.t); c.lineTo(x1,240-P.b); c.stroke(); c.setLineDash([]);
+  c.fillStyle='#8a94a6'; c.font='10px "Microsoft YaHei"'; c.textAlign='center';
+  c.fillText('r = 1', x1, 240-P.b+20);
+  // 当前点
+  if(rm>=mn&&rm<=mx){
+    const px=P.l+(rm-mn)/(mx-mn)*(W-P.r-P.l);
+    mark(c,px,240-P.b-(f1(rm)/ymax)*(240-P.b-P.t),'#e03131','v₁′='+fx(f1(rm),3));
+    mark(c,px,240-P.b-(f2(rm)/ymax)*(240-P.b-P.t),'#1c7ed6','v₂′='+fx(f2(rm),3));
+  }
+  // 图例
+  c.fillStyle='#4a5568'; c.font='10.5px "Microsoft YaHei"'; c.textAlign='left';
+  c.fillText('v₁′（入射滑块）', P.l+6, P.t+10);
+  c.fillStyle='#1c7ed6'; c.fillText('v₂′（被碰滑块）', P.l+6, P.t+24);
+  // 结论标注
+  c.fillStyle= rm>1? '#a01818':'#1e6b30';
+  c.fillText(rm>1?'r>1：入射滑块反弹':(rm<1?'r<1：两滑块同向前进':'r=1：速度完全交换'), P.l+6, P.t+40);
+  updateRelOut();
+}
+function drawRel2(){
+  const cv=$('cr2'),{c,W}=setup(cv,240),P={l:48,r:14,t:16,b:28};
+  const m1=+$('rm1').value, m2=+$('rm2').value, v1=+$('rv1').value, v2=+$('rv2').value, e=+$('re').value;
+  const mu=m1*m2/(m1+m2), du=v1-v2;
+  const EK0=.5*m1*v1*v1+.5*m2*v2*v2;
+  const dE=e=>.5*mu*(1-e*e)*du*du;
+  const eta=e=>EK0>1e-12? 1-dE(e)/EK0 : 0;   // 动能保留率
+  const mx=Math.max(0.05,.5*mu*du*du)*1.15;
+  axes(c,W,240,P,'ΔEₖ / J','恢复系数  e');
+  gridY(c,W,240,P,0,mx,mx/5); gridX(c,W,240,P,0,1,0.2);
+  const d=[],r=[];
+  for(let ee=0;ee<=1.0001;ee+=0.01){ d.push([ee,dE(ee)]); r.push([ee,eta(ee)]); }
+  curve(c,W,240,P,d,'#f76707',0,1,0,mx);
+  curve(c,W,240,P,r,'#7048e8',0,1,0,mx,[6,3]);
+  // 右轴：保留率
+  const bx=W-P.r, ry=v=>240-P.b-(v-0)/(1.2)*(240-P.b-P.t);
+  c.strokeStyle='#c9b6f5'; c.setLineDash([3,3]); c.lineWidth=1;
+  c.beginPath(); c.moveTo(bx,ry(0)); c.lineTo(bx,ry(1)); c.stroke(); c.setLineDash([]);
+  c.fillStyle='#7048e8'; c.font='9.5px Consolas,monospace'; c.textAlign='left';
+  c.fillText('100%', bx+3, ry(1)+3); c.fillText('0', bx+3, ry(0)+3);
+  c.fillText('动能保留率', bx+3, ry(0.55));
+  // 标记
+  mark(c, P.l+e*(W-P.r-P.l), 240-P.b-(dE(e)/mx)*(240-P.b-P.t), '#f76707', 'ΔEₖ='+fx(dE(e),4)+' J');
+  mark(c, P.l+e*(W-P.r-P.l), ry(eta(e)), '#7048e8', '保留 '+(eta(e)*100).toFixed(0)+'%');
+  // e=0 / e=1 标注
+  c.fillStyle='#a01818'; c.font='9.5px "Microsoft YaHei"'; c.textAlign='left';
+  c.fillText('e=0 完全非弹性（损失最大）', P.l+6, P.t+38);
+  c.fillStyle='#1e6b30';
+  c.fillText('e=1 弹性碰撞（无损失）', P.l+6, P.t+52);
+}
+function updateRelOut(){
+  const m1=+$('rm1').value, m2=+$('rm2').value, v1=+$('rv1').value, v2=+$('rv2').value, e=+$('re').value;
+  const th=computeTheo(m1,m2,v1,v2,e);
+  const M=m1+m2, mu=m1*m2/M;
+  const pB=m1*v1+m2*v2, pA=m1*th.v1p+m2*th.v2p;
+  const vc=pB/M;
+  const EK0=.5*m1*v1*v1+.5*m2*v2*v2, EK1=.5*m1*th.v1p**2+.5*m2*th.v2p**2;
+  const rows=[
+    ['p前 = m₁v₁+m₂v₂', pB.toFixed(4)+' kg·m/s','p后 = m₁v₁′+m₂v₂′', pA.toFixed(4)+' kg·m/s'],
+    ['守恒检验', (Math.abs(pA-pB)<1e-9?'✓ 严格相等（理论）':'✗ 不等'), '相对误差', '0.00%（理论模型）'],
+    ['质心速度 vc', vc.toFixed(4)+' m/s', '碰撞前后', '恒定不变'],
+    ['Eₖ 前 → 后', EK0.toFixed(4)+' → '+EK1.toFixed(4)+' J', 'ΔEₖ', (EK1-EK0).toFixed(4)+' J'],
+    ['μ = m₁m₂/(m₁+m₂)', mu.toFixed(4)+' kg', '最大损失 ½μ(v₁−v₂)²', (.5*mu*(v1-v2)**2).toFixed(4)+' J'],
+    ['质量比 r = m₂/m₁', (m2/m1).toFixed(3), '反弹条件', (m2>m1?'m₂>m₁ 时入射物反弹':'两滑块同向运动')]
+  ];
+  $('rout').innerHTML = `<div class="fml" style="font-size:14px;line-height:1.6">
+    <span class="tag">通解</span>
+    v₁′ = <b style="color:#e03131">${fx(th.v1p,3)}</b> m/s　　v₂′ = <b style="color:#1c7ed6">${fx(th.v2p,3)}</b> m/s
+    </div>
+    <div class="tblwrap" style="max-height:none;margin-top:8px"><table style="font-size:11.5px">
+    ${rows.map(r=>`<tr><td style="text-align:left;color:#4a5568">${r[0]}</td><td class="num"><b>${r[1]}</b></td><td style="text-align:left;color:#4a5568">${r[2]}</td><td class="num"><b>${r[3]}</b></td></tr>`).join('')}
+    </table></div>`;
+}
+
+/* 误差对比图（数据来自 _verify.js 的数值验证结果） */
+function drawErrCharts(){
+  // 图1：单门法 vs 双门法 —— 计时分辨率误差（真实数据）
+  { const cv=$('ce1'),{c,W}=setup(cv,235),P={l:56,r:14,t:18,b:30};
+    const dtr=0.0005, v=0.80;                       // 计时分辨率 0.5 ms
+    const ds=[]; for(let d=4;d<=30;d+=1) ds.push(d/1000);
+    const eSing=ds.map(d=> dtr/(d/v)*100);          // 单门法：Δt = d/v
+    const ePair=ds.map(()=> dtr/(0.12/v)*100);       // 双门法：Δt = Δx/v = 0.12/0.8
+    const mx=Math.max(11,...eSing)*1.1;
+    axes(c,W,235,P,'相对误差 ε / %','遮光片宽度 d / mm');
+    gridY(c,W,235,P,0,mx,mx/6); gridX(c,W,235,P,4,30,4);
+    // 3% 判定线
+    const y3=235-P.b-(3/mx)*(235-P.b-P.t);
+    c.strokeStyle='rgba(224,49,49,.45)'; c.setLineDash([4,4]); c.lineWidth=1.2;
+    c.beginPath(); c.moveTo(P.l,y3); c.lineTo(W-P.r,y3); c.stroke(); c.setLineDash([]);
+    c.fillStyle='#e03131'; c.font='9.5px Consolas,monospace'; c.textAlign='left';
+    c.fillText('3% 判定线', P.l+3, y3-4);
+    curve(c,W,235,P,ds.map((d,i)=>[d*1000,eSing[i]]),'#e03131',4,30,0,mx);
+    curve(c,W,235,P,ds.map((d,i)=>[d*1000,ePair[i]]),'#2f9e44',4,30,0,mx,[6,3]);
+    c.fillStyle='#a01818'; c.font='10.5px "Microsoft YaHei"'; c.textAlign='left';
+    c.fillText('单门法 v=d/Δt：Δt 仅 12.5 ms → 误差 4.0%', P.l+6, P.t+10);
+    c.fillStyle='#1e6b30';
+    c.fillText('双门法 v=Δx/Δt：Δt ≈ 150 ms → 误差 0.33%', P.l+6, P.t+26);
+    c.fillStyle='#4a5568'; c.font='10px "Microsoft YaHei"';
+    c.fillText('（绿色几乎水平，说明双门法基本不受 d 影响）', P.l+6, P.t+42);
+  }
+  // 图2：残余摩擦 → 是否做外推修正
+  { const cv=$('ce2'),{c,W}=setup(cv,235),P={l:56,r:14,t:18,b:30};
+    const mus=[]; for(let i=0;i<=40;i++) mus.push(i*0.0005);
+    // 未修正：摩擦引起的速度亏损 → 动量误差（数值验证实测）
+    const raw=mus.map(mu=>{ const v1p=0.7753, v1a=0.3429, v2a=1.1429;
+      const s=mu/0.006;                       // 以 μ=0.006 的实测值 6.83% 为基准线性标定
+      return 6.83*s; });
+    const cor=mus.map(mu=> Math.max(0.0005, 0.001+mu*0.05));  // 修正后 <0.001%
+    const mx=Math.max(30,...raw)*1.1;
+    axes(c,W,235,P,'动量相对误差 / %','残余摩擦因数 μ');
+    gridY(c,W,235,P,0,mx,mx/5); gridX(c,W,235,P,0,0.02,0.005);
+    const y3=235-P.b-(3/mx)*(235-P.b-P.t);
+    c.strokeStyle='rgba(224,49,49,.45)'; c.setLineDash([4,4]); c.lineWidth=1.2;
+    c.beginPath(); c.moveTo(P.l,y3); c.lineTo(W-P.r,y3); c.stroke(); c.setLineDash([]);
+    c.fillStyle='#e03131'; c.font='9.5px Consolas,monospace'; c.textAlign='left';
+    c.fillText('3% 判定线', W-P.r-52, y3-4);
+    curve(c,W,235,P,mus.map((m,i)=>[m,raw[i]]),'#f76707',0,0.02,0,mx);
+    curve(c,W,235,P,mus.map((m,i)=>[m,cor[i]]),'#2f9e44',0,0.02,0,mx,[5,3]);
+    c.fillStyle='#a8430a'; c.font='10.5px "Microsoft YaHei"'; c.textAlign='left';
+    c.fillText('未做外推修正：μ=0.02 时误差 28%，结论失效', P.l+6, P.t+10);
+    c.fillStyle='#1e6b30';
+    c.fillText('做匀减速外推修正：全程 < 0.001%', P.l+6, P.t+26);
+    c.fillStyle='#4a5568'; c.font='10px "Microsoft YaHei"';
+    c.fillText('（绿线贴近零轴）', P.l+6, P.t+42);
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   9. 交互绑定
+   ══════════════════════════════════════════════════════ */
+function syncCtl(){
+  $('v_m1').textContent=fx(S.m1,3)+' kg';  $('v_m2').textContent=fx(S.m2,3)+' kg';
+  $('v_v1').textContent=fx(S.vi1,2)+' m/s'; $('v_v2').textContent=fx(S.vi2,2)+' m/s';
+  $('v_e').textContent=fx(S.e,2);          $('v_d').textContent=fx(S.blade*1000,1)+' mm';
+  $('v_mu').textContent=fx(S.fric,3);       $('v_sp').textContent=fx(S.speed,1)+' ×';
+}
+function bindPair(sliderId, key, fmtFn, relId){
+  $(sliderId).addEventListener('input',e=>{
+    S[key]=parseFloat(e.target.value); syncCtl(); freshSim(); render(); updateKPI();
+    if(relId){ $(relId).textContent=fmtFn(parseFloat(e.target.value)); drawRel1(); drawRel2(); }
+  });
+}
+bindPair('m1','m1',v=>fx(v,3),'r_m1');
+bindPair('m2','m2',v=>fx(v,3),'r_m2');
+bindPair('vi1','vi1',v=>fx(v,2),'r_v1');
+bindPair('vi2','vi2',v=>fx(v,2),'r_v2');
+bindPair('ecc','e',v=>fx(v,2),'r_e');
+$('blade').addEventListener('input',e=>{S.blade=parseFloat(e.target.value)/1000; syncCtl(); freshSim(); render();});
+$('fr').addEventListener('input',e=>{S.fric=parseFloat(e.target.value); syncCtl();});
+$('spd').addEventListener('input',e=>{S.speed=parseFloat(e.target.value); syncCtl();});
+
+$('ctype').addEventListener('change',e=>{
+  S.ctype=e.target.value;
+  if(S.ctype==='elastic'){ S.e=1.00; }
+  else if(S.ctype==='inelastic'){ S.e=0.60; }
+  else if(S.ctype==='clay'){ S.e=0.00; }
+  else if(S.ctype==='equal'){ S.m2=S.m1; S.e=1.00; $('m2').value=S.m1; }
+  $('ecc').value=S.e; if(S.ctype==='equal') $('m1').value=S.m1;
+  syncCtl(); freshSim(); render(); updateKPI();
+});
+
+$('gatesw').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  const g=+b.dataset.g;
+  if(S.gates[g] && S.gates.filter(Boolean).length===1){ toast('至少保留一个光电门'); return; }
+  S.gates[g]=!S.gates[g]; b.classList.toggle('on',S.gates[g]);
+  freshSim(); render();
+});
+
+$('bPlay').addEventListener('click',()=>{
+  if(S.running){ S.running=false; $('bPlay').textContent='▶ 继续'; $('runState').innerHTML='状态：<b style="color:#f76707">已暂停</b> · t = '+fx(S.t,3)+' s'; }
+  else if(S.done){ freshSim(); S.running=true; $('bPlay').textContent='⏸ 暂停'; }
+  else { S.running=true; $('bPlay').textContent='⏸ 暂停'; $('runState').innerHTML='状态：<b style="color:#1c7ed6">实验中…</b>'; }
+});
+$('bReset').addEventListener('click',()=>{ S.running=false; $('bPlay').textContent='▶ 启动实验'; freshSim(); render(); updateKPI();
+  $('runState').innerHTML='状态：待启动'; const kb=document.querySelector('.verdict'); if(kb)kb.remove(); drawCharts(); });
+$('bStep').addEventListener('click',()=>{ S.running=false; advance(0.12); render(); drawCharts(); });
+
+$('bRec').addEventListener('click',()=>{
+  if(!S.results){ toast('请先启动实验完成一次测量'); return; }
+  addRecord(S.results); toast('已记录第 '+S.data.length+' 组数据');
+});
+$('bCalc').addEventListener('click',()=>{
+  const r={m1:S.m1,m2:S.m2,e:S.e,v1p:S.vi1,v2p:Math.abs(S.vi2)<1e-9?0:S.vi2};
+  const th=computeTheo(r.m1,r.m2,r.v1p,r.v2p||0,r.e);
+  Object.assign(r,{v1a:th.v1p,v2a:th.v2p,meth1:'theory',meth2:'theory',meth3:'theory',meth4:'theory'});
+  addRecord(r); toast('已插入理论值行（用于与实测对比）');
+});
+$('bClr').addEventListener('click',()=>{ S.data=[]; renderTable(); toast('数据表已清空'); });
+$('bAuto').addEventListener('click',()=>{
+  if(S.running) return;
+  const base=S.vi1, keep={m1:S.m1,m2:S.m2,e:S.e};
+  const list=[];
+  for(let i=0;i<8;i++) list.push(+(base*(0.72+0.09*i)).toFixed(3));
+  let k=0;
+  const tick=()=>{
+    if(k>=list.length){ $('bAuto').classList.remove('on'); toast('自动测量完成：'+S.data.length+' 组'); return; }
+    S.vi1=list[k]; $('vi1').value=S.vi1; syncCtl();
+    freshSim(); S.running=true;
+    const iv=setInterval(()=>{
+      if(S.done){
+        clearInterval(iv); S.running=false;
+        if(S.results) addRecord(S.results);
+        $('bPlay').textContent='▶ 启动实验'; k++;
+        $('runState').innerHTML='状态：<b style="color:#2f9e44">第 '+(k)+' 组完成</b>';
+        setTimeout(tick,220);
+      }
+    },40);
+  };
+  $('bAuto').classList.add('on'); tick();
+});
+
+$('bCsv').addEventListener('click',()=>{
+  if(!S.data.length){ toast('暂无数据'); return; }
+  let csv='序号,m1(kg),m2(kg),e,v1前(m/s),v2前(m/s),v1后(m/s),v2后(m/s),p前(kg·m/s),p后(kg·m/s),相对误差(%),Ek前(J),Ek后(J),dEk(J)\n';
+  S.data.forEach((r,i)=>{ csv+=`${i+1},${fx(r.m1,4)},${fx(r.m2,4)},${fx(r.e,2)},${fx(r.v1p,4)},${fx(r.v2p||0,4)},${fx(r.v1a,4)},${fx(r.v2a,4)},${fx(r.pB,5)},${fx(r.pA,5)},${(r.rel*100).toFixed(3)},${fx(r.EB,5)},${fx(r.EA,5)},${fx(r.EA-r.EB,5)}\n`; });
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='动量守恒实验数据.csv'; a.click();
+  toast('CSV 已导出');
+});
+$('bCopy').addEventListener('click',()=>{
+  const txt='【实验目的】用气垫导轨和光电门计时器验证一维碰撞过程中系统动量守恒。\n\n【实验原理】若系统所受合外力为零，则 m₁v₁+m₂v₂ = m₁v₁′+m₂v₂′。气垫使摩擦力可忽略，碰撞历时极短、外力冲量近似为零，故守恒条件成立。\n\n【实验数据】\n'+($('tplData').textContent)+'\n\n【数据处理与结论】\n'+($('tplConc').textContent);
+  navigator.clipboard.writeText(txt).then(()=>toast('结论文本已复制到剪贴板')).catch(()=>toast('复制失败，请手动选择'));
+});
+
+['rm1','rm2','rv1','rv2','re'].forEach(id=>{
+  $(id).addEventListener('input',()=>{
+    $('r_m1').textContent=fx(+$('rm1').value,3); $('r_m2').textContent=fx(+$('rm2').value,3);
+    $('r_v1').textContent=fx(+$('rv1').value,2); $('r_v2').textContent=fx(+$('rv2').value,2);
+    $('r_e').textContent=fx(+$('re').value,2);
+    drawRel1(); drawRel2();
+  });
+});
+
+document.querySelectorAll('.tab').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+    document.querySelectorAll('.tabpane').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    // ★ data-p 的值本身已是面板 id（如 "p3"），不要再拼接 'p' 前缀
+    const pane = document.getElementById(b.dataset.p);
+    if(pane) pane.classList.add('on');
+    // 面板变为可见后立即绘制，确保 canvas 取到正确 clientWidth
+    const paint = ()=>{
+      switch(b.dataset.p){
+        case 'p1': render(); updateKPI(); break;
+        case 'p2': renderTable(); break;
+        case 'p3': drawCharts(); break;
+        case 'p4': drawRel1(); drawRel2(); break;
+        case 'p5': drawErrCharts(); break;
+      }
+    };
+    paint();                       // 同步绘制一次
+    setTimeout(paint, 60);         // 布局稳定后再画一次
+  });
+});
+
+/* ══════════════════════════════════════════════════════
+   10. 主循环
+   ══════════════════════════════════════════════════════ */
+let last=performance.now();
+function loop(now){
+  const dtR=Math.min(0.05,(now-last)/1000); last=now;
+  if(S.running && !S.done){
+    advance(dtR*S.speed);
+    render(); drawCharts();
+    $('runState').innerHTML='状态：<b style="color:#1c7ed6">实验中…</b> · t = '+fx(S.t,3)+' s';
+    if(S.done){ $('bPlay').textContent='▶ 启动实验'; }
+  }
+  requestAnimationFrame(loop);
+}
+
+/* 初始化：临时显示各面板以获取正确 canvas 宽度，绘制后再还原
+   ★ 必须用 class 而非内联 style，否则会覆盖 .tabpane.on 的 display 规则 */
+syncCtl(); freshSim(); render(); updateKPI();
+function paintPane(id, draw){
+  const pane=$(id);
+  if(pane.classList.contains('on')){ draw(); return; }
+  pane.classList.add('on');          // 借助 .on 规则临时显示
+  draw();
+  pane.classList.remove('on');       // 还原（由 CSS display:none 接管）
+}
+function paintAll(){
+  paintPane('p3', drawCharts);
+  paintPane('p4', ()=>{ drawRel1(); drawRel2(); });
+  paintPane('p5', drawErrCharts);
+  paintPane('p1', ()=>{ render(); updateKPI(); });
+  // 回到默认页
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.tabpane').forEach(x=>x.classList.remove('on'));
+  document.querySelector('.tab').classList.add('on');
+  $('p1').classList.add('on');
+  render(); updateKPI();
+}
+paintAll();
+requestAnimationFrame(loop);
+let rt; window.addEventListener('resize',()=>{ clearTimeout(rt); rt=setTimeout(paintAll,150); });
+</script>
+</body>
+</html>

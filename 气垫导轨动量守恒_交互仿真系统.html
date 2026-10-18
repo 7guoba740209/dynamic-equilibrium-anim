@@ -124,6 +124,15 @@ i{font-style:italic}
 .note{font-size:12px;color:var(--ink3);margin-top:8px;line-height:1.6}
 .legend{display:flex;gap:13px;flex-wrap:wrap;font-size:11.5px;color:var(--ink2);margin-top:7px}
 .legend i{display:inline-block;width:13px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+/* 实验操作条：紧贴导轨下方，横向一行铺开 */
+.opbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:11px;padding:10px 13px;
+  background:linear-gradient(180deg,#f8fafc,#f1f4f8);border:1px solid var(--line);border-radius:9px}
+.opbar .opmain{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.opbar .opmain+.opmain{padding-left:10px;border-left:1px solid var(--line)}
+.opbar .opstate{flex:1 1 200px;min-width:150px;font-size:11.5px;color:var(--ink3);text-align:right}
+.opbar button{padding:7px 15px;font-size:13px}
+.opbar .pri{padding:8px 20px;font-size:13.5px}
+@media(max-width:760px){.opbar .opstate{text-align:left;flex-basis:100%}}
 .steps{counter-reset:s;list-style:none;padding:0}
 .steps li{counter-increment:s;position:relative;padding:9px 0 9px 38px;border-bottom:1px solid var(--line2);font-size:13px;line-height:1.65}
 .steps li:last-child{border:none}
@@ -178,6 +187,22 @@ i{font-style:italic}
         <span><i style="background:#f76707"></i>碰撞闪光与冲量</span>
         <span><i style="background:#8a94a6"></i>气垫导轨与刻度尺</span>
       </div>
+
+      <!-- 实验操作：紧贴导轨下方，视线不用来回扫 -->
+      <div class="opbar">
+        <div class="opmain">
+          <button class="pri" id="bPlay">▶ 启动实验</button>
+          <button id="bStep">⏭ 单步</button>
+          <button id="bReset">↺ 复位</button>
+        </div>
+        <div class="opmain">
+          <button class="sm" id="bRec">＋ 记录本组数据</button>
+          <button class="sm" id="bAuto">⚡ 自动测 8 组</button>
+          <button class="sm" id="bClr">🗑 清空数据表</button>
+        </div>
+        <div class="opstate" id="runState">状态：待启动</div>
+      </div>
+
       <div class="kpis" id="kpis"></div>
     </div>
   </div>
@@ -237,23 +262,9 @@ i{font-style:italic}
         <div class="btnrow">
           <button class="sm" id="bLayout">恢复推荐布置</button>
         </div>
-        <div class="note" id="layoutTip">推荐：G₁ 在碰撞区<b>左侧</b>、G₂ 在<b>右侧</b>，两滑块夹在中间 —— 这是同时测得三个速度的唯一布置。</div>
+        <div class="note" id="layoutTip">滑块与光电门均可拖动，可放在导轨任意位置；下方提示会告知当前摆法能测到哪些量。</div>
       </div>
 
-      <div class="grp">
-        <div class="gt">实验操作</div>
-        <div class="btnrow">
-          <button class="pri" id="bPlay">▶ 启动实验</button>
-          <button id="bStep">⏭ 单步</button>
-          <button id="bReset">↺ 复位</button>
-        </div>
-        <div class="btnrow">
-          <button class="sm" id="bRec">＋ 记录本组数据</button>
-          <button class="sm" id="bAuto">⚡ 自动测 8 组</button>
-          <button class="sm" id="bClr">🗑 清空数据表</button>
-        </div>
-        <div class="note" id="runState">状态：待启动</div>
-      </div>
       </div>
       </div>
     </div>
@@ -1520,26 +1531,36 @@ function applyLayout(g1,g2,x1,x2){
   syncPos(); freshSim(); render(); updateKPI();
 }
 
-/* 拖动时的合法性约束：保证 G₁ < 碰撞点 < G₂，且滑块初始不重叠、不越界 */
+/* 拖动约束：只保证物理上"不会出错"的底线，不限制用户的摆法
+   —— 滑块初始位置可放在导轨【任意】位置
+   —— 光电门可放在任意位置（只做"两门不重合""不贴边"处理）
+   摆法能否测全，由 syncPos() 的实时诊断提示告知，而不是硬性禁止        */
 function constrain(which){
   const half=L_SLIDE/2, lo=half+SLIDE_MARGIN, hi=L_TRACK-half-SLIDE_MARGIN;
   if(which==='s1'||which==='s2'||which==='both'){
     X_S1_0=clamp(X_S1_0,lo,hi);
     X_S2_0=clamp(X_S2_0,lo,hi);
-    if(X_S2_0-X_S1_0 < L_SLIDE+0.04){          // 两滑块至少留 4 cm 间隙
-      if(which==='s1') X_S1_0=Math.max(lo, X_S2_0-L_SLIDE-0.04);
-      else            X_S2_0=Math.min(hi, X_S1_0+L_SLIDE+0.04);
+    if(X_S2_0-X_S1_0 < L_SLIDE+0.03){          // 两滑块至少留 3 cm 间隙（物理上不能重叠）
+      if(which==='s1') X_S1_0=Math.max(lo, X_S2_0-L_SLIDE-0.03);
+      else            X_S2_0=Math.min(hi, X_S1_0+L_SLIDE+0.03);
     }
   }
-  const xc=xCol();
-  // G₁ 必须落在滑块1 右侧、碰撞点左侧；G₂ 必须落在碰撞点右侧、端部左侧
-  if(which==='g1'||which==='both'||which==='s1'||which==='s2'){
-    G_POS[0]=clamp(G_POS[0], X_S1_0+0.03, Math.max(X_S1_0+0.03, xc-0.06));
+  if(which==='g1'||which==='both') G_POS[0]=clamp(G_POS[0], G_MIN, G_MAX);
+  if(which==='g2'||which==='both') G_POS[1]=clamp(G_POS[1], G_MIN, G_MAX);
+  if(Math.abs(G_POS[1]-G_POS[0]) < 0.05){       // 两门不重合
+    if(which==='g1') G_POS[0]=clamp(G_POS[1]-0.05, G_MIN, G_MAX);
+    else             G_POS[1]=clamp(G_POS[0]+0.05, G_MIN, G_MAX);
   }
-  if(which==='g2'||which==='both'||which==='s2'){
-    G_POS[1]=clamp(G_POS[1], Math.min(xc+0.12, L_TRACK-0.06), L_TRACK-0.06);
-  }
-  if(G_POS[1]-G_POS[0] < 0.06) G_POS[1]=Math.min(L_TRACK-0.06, G_POS[0]+0.06);
+}
+
+/* ★ 摆法诊断：告知当前装置能测到什么、测不到什么（只提示，不禁止） */
+function diagnose(){
+  const xc=xCol(), g1=G_POS[0], g2=G_POS[1];
+  // v₁前：滑块1 初始须在 G₁ 左侧，才会向右经过 G₁
+  const v1pOK = (X_S1_0 + L_SLIDE/2) < g1 && S.vi1 > 0.05;
+  // 碰撞后两项：碰撞点须在 G₂ 左侧，且滑块2 初始也在 G₂ 左侧
+  const postOK = (xc < g2) && (X_S2_0 < g2);
+  return { v1pOK, postOK, allOK: v1pOK && postOK, xc };
 }
 
 function syncPos(){
@@ -1549,17 +1570,29 @@ function syncPos(){
   $('v_x2').textContent=X_S2_0.toFixed(3)+' m';
   $('g1pos').value=G_POS[0]; $('g2pos').value=G_POS[1];
   $('s1pos').value=X_S1_0;   $('s2pos').value=X_S2_0;
-  // 布置是否合理
-  const xc=xCol();
-  const ok = G_POS[0] < xc && G_POS[1] > xc && G_POS[1]-G_POS[0] > 0.06;
-  const tip=$('layoutTip');
-  if(ok){
-    tip.innerHTML='当前布置 ✔ 合理：G₁ 在碰撞区左侧、G₂ 在右侧，两滑块夹在中间。碰撞点 x = <b>'+xc.toFixed(3)+' m</b>';
-    tip.style.color='var(--ink3)';
+
+  const d=diagnose(), tip=$('layoutTip');
+  const chip=(ok,txt)=>`<span style="display:inline-block;padding:2px 8px;border-radius:10px;margin:2px 4px 2px 0;
+    background:${ok?'rgba(47,158,68,.14)':'rgba(224,49,49,.12)'};
+    color:${ok?'#1e6b30':'#a01818'};border:1px solid ${ok?'rgba(47,158,68,.45)':'rgba(224,49,49,.4)'};
+    font-size:11.5px">${ok?'✔':'⚠'} ${txt}</span>`;
+  let head, col;
+  if(d.allOK){
+    head='当前布置 ✔ 测全三个速度：';
+    col='var(--ink3)';
   } else {
-    tip.innerHTML='⚠ 当前布置无法测全三个速度。需满足：G₁ &lt; 碰撞点 &lt; G₂。点击"恢复推荐布置"可一键复位。';
-    tip.style.color='#a8430a';
+    head='当前布置可测：';
+    col='#a8430a';
   }
+  tip.innerHTML = head
+    + chip(d.v1pOK, 'v₁ 前（滑块1 过 G₁）')
+    + chip(d.postOK, 'v₁′ 后 / v₂′ 后（过 G₂）')
+    + `<div style="margin-top:5px;font-size:11.5px">碰撞点 x = <b>${d.xc.toFixed(3)} m</b>　`
+    + `G₁ ${G_POS[0].toFixed(3)} m ｜ G₂ ${G_POS[1].toFixed(3)} m ｜ `
+    + `滑块1 ${X_S1_0.toFixed(3)} m ｜ 滑块2 ${X_S2_0.toFixed(3)} m`
+    + (d.allOK?'':`<br>⚠ 上述缺失项将无法给出速度。点击"恢复推荐布置"可一键复位。`)
+    + `</div>`;
+  tip.style.color=col;
 }
 
 /* 画布坐标 ↔ 世界坐标 */

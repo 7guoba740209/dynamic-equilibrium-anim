@@ -169,7 +169,7 @@ i{font-style:italic}
 <div class="col">
   <div>
     <div class="card">
-      <h2>气垫导轨仿真实验台<span class="hint">导轨长 1.20 m ｜ 滑块长 9 cm ｜ 碰撞点 x = 0.40 m ｜ G₁G₂（碰撞前，Δx = 0.12 m）· G₃G₄（碰撞后，Δx = 0.15 m）</span></h2>
+      <h2>气垫导轨仿真实验台<span class="hint">导轨长 1.20 m ｜ 滑块长 9 cm ｜ 两道光电门 G₁（碰撞前）· G₂（碰撞后）｜ ⇔ 光电门与滑块均可在图上直接拖动</span></h2>
       <canvas id="stage" height="330"></canvas>
       <div class="legend">
         <span><i style="background:#e03131"></i>滑块1（入射）</span>
@@ -222,14 +222,22 @@ i{font-style:italic}
           <input type="range" id="fr" min="0" max="0.020" step="0.001" value="0.004"></div>
         <div class="ctl"><label>播放速度<span class="val" id="v_sp">0.6 ×</span></label>
           <input type="range" id="spd" min="0.1" max="1.5" step="0.05" value="0.6"></div>
-        <div class="ctl"><label>光电门（可逐个关闭以复现两门简化实验）</label>
-          <div style="display:flex;gap:6px;flex-wrap:wrap" id="gatesw">
-            <button class="sm on" data-g="0">G₁</button>
-            <button class="sm on" data-g="1">G₂</button>
-            <button class="sm on" data-g="2">G₃</button>
-            <button class="sm on" data-g="3">G₄</button>
-          </div>
+      </div>
+
+      <div class="grp">
+        <div class="gt">位置调整（也可直接在导轨上拖动）</div>
+        <div class="ctl"><label>G₁ 位置（测 v₁前）<span class="val" id="v_g1">0.150 m</span></label>
+          <input type="range" id="g1pos" min="0.055" max="1.145" step="0.005" value="0.150"></div>
+        <div class="ctl"><label>G₂ 位置（测 v₁′后 / v₂′后）<span class="val" id="v_g2">0.620 m</span></label>
+          <input type="range" id="g2pos" min="0.055" max="1.145" step="0.005" value="0.620"></div>
+        <div class="ctl"><label>滑块1 初始位置<span class="val" id="v_x1">0.064 m</span></label>
+          <input type="range" id="s1pos" min="0.020" max="1.100" step="0.005" value="0.064"></div>
+        <div class="ctl"><label>滑块2 初始位置<span class="val" id="v_x2">0.490 m</span></label>
+          <input type="range" id="s2pos" min="0.020" max="1.100" step="0.005" value="0.490"></div>
+        <div class="btnrow">
+          <button class="sm" id="bLayout">恢复推荐布置</button>
         </div>
+        <div class="note" id="layoutTip">推荐：G₁ 在碰撞区<b>左侧</b>、G₂ 在<b>右侧</b>，两滑块夹在中间 —— 这是同时测得三个速度的唯一布置。</div>
       </div>
 
       <div class="grp">
@@ -525,21 +533,27 @@ i{font-style:italic}
 /* ══════════════════════════════════════════════════════
    0. 常量与工具
    ══════════════════════════════════════════════════════ */
-const L_TRACK = 1.20;      // 导轨总长 (m) —— G₄ 右侧留0.52 m 余量；滑块采齐数据即终止，不必很长
+const L_TRACK = 1.20;      // 导轨总长 (m)
 const L_SLIDE = 0.090;     // 滑块长度 (m)
-/* 装置几何：碰撞点固定在 x = 0.400 m
-   G₁G₂ 在碰撞前（间距 0.12 m），G₃G₄ 在碰撞后（间距 0.15 m，留足读数标签显示空间）
-   → 碰撞前后各有一对门，可分别做双门法测速 */
-const G_POS   = [0.150, 0.270, 0.545, 0.695];
-const X_S1_0  = 0.064;     // 滑块1 初始中心位置
-const X_S2_0  = 0.490;     // 滑块2 初始中心位置
-const X_COL   = X_S2_0 - L_SLIDE;   // 固定碰撞点 x = 0.400 m
+/* ★ 两门方案：G₁ 在碰撞区左侧，G₂ 在碰撞区右侧
+   —— 这是唯一能同时测得 v₁前 / v₁′后 / v₂′后 的布置
+     · 滑块1 碰撞前向左过 G₁ → v₁前（单门法 d/Δt + 匀减速外推修正）
+     · 滑块1 碰撞后向右过 G₂ → v₁′后
+     · 滑块2 碰撞后向右过 G₂ → v₂′后
+   两门位置、滑块初始位置均可在画布上直接拖动（见"拖动"逻辑）        */
+let G_POS   = [0.150, 0.620];   // 可拖动：[G₁, G₂]
+let X_S1_0  = 0.064;             // 滑块1 初始中心（可拖动）
+let X_S2_0  = 0.490;             // 滑块2 初始中心（可拖动）
 const DT      = 5e-5;      // 积分步长 (s)
 const G_ACC   = 9.8;
 const T_WIN   = 1.8;       // 碰撞后有效测速时间窗 (s)
-                            // 下界：慢滑块走完G₃G₄ 最长约 1.0 s
-                            // 上界：缓冲反射后的二次过门约 2.2 s，必须排除
 const T_TAIL  = 0.35;      // 预留字段（当前终止逻辑已不需要）
+
+/* 拖动约束 */
+const G_MIN  = 0.055, G_MAX  = L_TRACK-0.055;      // 门可拖动范围
+const SLIDE_MARGIN = 0.020;                        // 滑块距端部最小间隙
+const gapOf = () => (X_S2_0 - L_SLIDE/2) - (X_S1_0 + L_SLIDE/2);   // 两滑块间距
+const xCol  = () => X_S2_0 - L_SLIDE;             // 碰撞点（随滑块2 移动）
 
 const $ = id => document.getElementById(id);
 const clamp = (v,a,b)=>v<a?a:v>b?b:v;
@@ -554,7 +568,6 @@ function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('on'
 const S = {
   m1:0.250, m2:0.100, vi1:0.80, vi2:0.00,
   e:1.00, blade:0.010, fric:0.004, speed:0.6,
-  gates:[true,true,true,true],
   ctype:'elastic',
   running:false, t:0, done:false, collided:false, tCol:null,
   bonded:false, x:0,
@@ -564,13 +577,15 @@ const S = {
   results:null,     // 本次测量结果
   data:[],          // 多组数据
   seq:0,
-  flash:0, flashX:0, impJ:0
+  flash:0, flashX:0, impJ:0,
+  drag:null,        // {kind:'gate'|'s1'|'s2', idx, off}
+  hover:null        // 悬停高亮
 };
 
 function freshSim(){
   S.s = [
-    {m:S.m1, x:X_S1_0, v:S.vi1, col:'#e03131', bladeX:X_S1_0, blocked:[false,false,false,false]},
-    {m:S.m2, x:X_S2_0, v:S.vi2, col:'#1c7ed6', bladeX:X_S2_0, blocked:[false,false,false,false]}
+    {m:S.m1, x:X_S1_0, v:S.vi1, col:'#e03131', blocked:[false,false]},
+    {m:S.m2, x:X_S2_0, v:S.vi2, col:'#1c7ed6', blocked:[false,false]}
   ];
   S.t=0; S.collided=false; S.tCol=null; S.bonded=false; S.done=false;
   S.nCol=0; S.hitBuf=[false,false]; S.tCollect=null;
@@ -594,8 +609,7 @@ const halfBlade = ()=> S.blade/2;
 
 function checkGates(sIdx, prevX, newX, tPrev, tNow){
   const s = S.s[sIdx], hb = halfBlade();
-  for(let g=0; g<4; g++){
-    if(!S.gates[g]) continue;
+  for(let g=0; g<2; g++){
     const gx = G_POS[g], L = gx-hb, R = gx+hb;
     if(!s.blocked[g]){
       // 进入
@@ -694,18 +708,19 @@ function advance(dur){
   if(S.flash>0) S.flash = Math.max(0, S.flash - 0.035);
   if(S.done) return;
 
-  /* 终止判定：两滑块都拿到"第一次碰撞后、缓冲反射前"的干净数据即收尾
-     ★ 撞缓冲【不】触发提前终止 —— 反射产生的事件会被时间窗 T_WIN 过滤掉，
-       而慢的那一个滑块走完G₃G₄最长需~1.0 s，过早收尾会丢数据。
-       这也是导轨能缩到 1.20 m 的前提。*/
+  /* 终止判定：两个滑块都过 G₂ 才收尾（碰撞后速度都在用）
+     ★ 关键：不能用"按当前速度估算剩余时间"的方式提前收尾 ——
+       减速中每次重估都会偏小，导致慢滑块永远走不到门就被停掉。
+       改为：只要还没都过门，就一直等到时间窗 T_WIN 结束。
+       期间撞缓冲产生的二次过门会被 T_WIN 上界滤掉（velocityOf 只取最早事件），
+       所以等待是安全的。                                              */
   const tc = S.tCol;
-  if(tc!==null && S.t > tc + 0.08){
-    const cleanPost = si => S.ev.filter(e=>e.s===si && e.tc>tc && e.tc<tc+T_WIN).length;
-    if(cleanPost(0)>=2 && cleanPost(1)>=2) { finish(); return; }
-    // 二次碰撞、长时间无进展 → 强制收尾（撞缓冲本身不算）
-    if(S.nCol>=2 || S.t>tc+T_WIN) { finish(); return; }
+  if(tc!==null && S.t > tc + 0.06){
+    const passed = si => S.ev.some(e=>e.s===si && e.g===1 && e.tc>tc && e.tc<tc+T_WIN);
+    if(passed(0) && passed(1)){ finish(); return; }
+    if(S.nCol>=2 || S.t>tc+T_WIN){ finish(); return; }
   }
-  if(S.t > 10){ finish(); return; }
+  if(S.t > 8){ finish(); return; }
 }
 
 /* ══════════════════════════════════════════════════════
@@ -769,12 +784,14 @@ function finish(){
   // 滑块2 碰撞前：若全程静止则 v₂前 = 0，否则用反演值
   const v2p = v2pRaw ? v2pRaw.v : (Math.abs(S.vi2)<1e-9 ? 0 : null);
   const mv = (r,fallback)=> r ? r.v : fallback;
-  // 各门挡光时间（按"第几次过门"编号），用于实验结论展示
+  // 各门挡光时间（★ 碰撞后两滑块都记录，供实验结论展示）
   const blk = [];
-  for(let g=0; g<4; g++){
-    if(!S.gates[g]) continue;
+  for(let g=0; g<2; g++){
     const list = S.ev.filter(e=>e.g===g).sort((a,b)=>a.tc-b.tc);
-    list.forEach((e,i)=>blk.push({g:g+1, s:e.s+1, n:i+1, dt:e.dt, tc:e.tc}));
+    list.forEach((e,i)=>blk.push({
+      g:g+1, s:e.s+1, n:i+1, dt:e.dt, tc:e.tc,
+      phase: (S.tCol!==null && e.tc>S.tCol) ? 'post' : 'pre'
+    }));
   }
   S.results = {
     m1:S.m1, m2:S.m2, e:S.e,
@@ -851,21 +868,13 @@ function render(){
     for(let k=0;k<4;k++){ c.beginPath(); c.moveTo(x-8,yFoot+13.5+k*1.1); c.lineTo(x+8,yFoot+13.5+k*1.1); c.stroke(); }
   }
 
-  /* --- 碰撞区标记（导轨面下方虚线 + 标签） --- */
+  /* --- 碰撞区标记（滑块2 位置随动） --- */
   {
-    const xc = X(X_COL);
+    const xc = X(xCol());
     c.strokeStyle='rgba(247,103,7,.55)'; c.setLineDash([5,4]); c.lineWidth=1.3;
     c.beginPath(); c.moveTo(xc, yRail-2); c.lineTo(xc, yR+2); c.stroke(); c.setLineDash([]);
     c.fillStyle='rgba(247,103,7,.9)'; c.font='bold 9.5px "Microsoft YaHei"'; c.textAlign='center';
-    c.fillText('碰撞区', xc, yRail-124);
-  }
-
-  /* --- 起点位置标记 --- */
-  {
-    c.fillStyle='#8a94a6'; c.font='9px "Microsoft YaHei"'; c.textAlign='center';
-    const x1=X(X_S1_0);
-    c.beginPath(); c.moveTo(x1, yRail+1); c.lineTo(x1-4, yRail-7); c.lineTo(x1+4, yRail-7); c.closePath(); c.fill();
-    c.fillText('起点', x1, yRail+13);
+    c.fillText('碰撞区', xc, yR-6);
   }
 
   /* --- 端部缓冲块 --- */
@@ -875,16 +884,21 @@ function render(){
   c.fillStyle='#495057';
   c.fillRect(PAD-24, yRail+8, 15, 4); c.fillRect(W-PAD+9, yRail+8, 15, 4);
 
-  /* --- 光电门 --- */
-  for(let g=0; g<4; g++){
-    if(!S.gates[g]) continue;
+  /* --- 光电门（2 个，可拖动） --- */
+  for(let g=0; g<2; g++){
     const x = X(G_POS[g]);
+    const hov = S.hover && S.hover.kind==='gate' && S.hover.idx===g;
+    const drg = S.drag && S.drag.kind==='gate' && S.drag.idx===g;
+    const on = hov || drg;
+    // 底座阴影
+    c.fillStyle='rgba(0,0,0,.10)';
+    c.beginPath(); c.ellipse(x, yRail+2, 16, 4, 0,0,7); c.fill();
     // 立柱
-    c.fillStyle='#8f959c';
+    c.fillStyle = on ? '#6ec07a' : '#8f959c';
     c.beginPath(); c.roundRect(x-11, yRail-118, 22, 120, 3); c.fill();
-    c.strokeStyle='#6c737a'; c.lineWidth=1; c.stroke();
+    c.strokeStyle= on ? '#3f9a4c' : '#6c737a'; c.lineWidth = on?2:1; c.stroke();
     // 顶部横臂伸向导轨
-    c.fillStyle='#9aa1a8';
+    c.fillStyle = on ? '#7ec78a' : '#9aa1a8';
     c.beginPath(); c.roundRect(x-9, yRail-104, 18, 13, 2); c.fill();
     // 光路槽
     c.fillStyle='#e9ecef';
@@ -897,25 +911,46 @@ function render(){
     c.beginPath(); c.arc(x, yRail-84, 10, 0, 7); c.fill();
     c.beginPath(); c.arc(x, yRail-57, 5.5, 0, 7); c.fill();
     c.beginPath(); c.arc(x, yRail-57, 10, 0, 7); c.fill();
-    c.fillStyle='#2f9e44'; c.font='bold 10px Consolas,monospace'; c.textAlign='center';
+    c.fillStyle='#2f9e44'; c.font='bold 11px Consolas,monospace'; c.textAlign='center';
     c.fillText('G'+(g+1), x, yRail-124);
+    // 位置读数 + 拖动提示
+    c.font='9.5px Consolas,monospace';
+    c.fillStyle = on ? '#2f9e44' : '#6b7480';
+    c.fillText(G_POS[g].toFixed(3)+' m', x, yRail-110);
+    if(on){
+      c.fillStyle='rgba(46,125,50,.9)'; c.font='bold 9px "Microsoft YaHei"';
+      c.fillText('↔ 可拖动', x, yRail+22);
+      // 手柄箭头
+      c.strokeStyle='rgba(46,125,50,.8)'; c.lineWidth=2; c.lineCap='round';
+      c.beginPath(); c.moveTo(x-16, yRail-70); c.lineTo(x-16, yRail-40);
+      c.moveTo(x-21, yRail-45); c.lineTo(x-16, yRail-40); c.lineTo(x-11, yRail-45);
+      c.moveTo(x+16, yRail-70); c.lineTo(x+16, yRail-40);
+      c.moveTo(x+11, yRail-45); c.lineTo(x+16, yRail-40); c.lineTo(x+21, yRail-45);
+      c.stroke();
+    }
   }
 
-  /* --- 滑块 --- */
+  /* --- 滑块（初始位置可拖动） --- */
   const hSL=30, hBlade=44;
   for(let i=0;i<2;i++){
     const s = S.s[i];
     const cx = X(s.x), hw = L_SLIDE/2*sc;
     if(cx<-60||cx>W+60) continue;
+    const hov = S.hover && S.hover.kind===(i===0?'s1':'s2');
+    const drg = S.drag  && S.drag.kind===(i===0?'s1':'s2');
+    const atStart = Math.abs(s.x - (i===0?X_S1_0:X_S2_0)) < 1e-9;
+    // 只在未开始/已复位时提示可拖动
+    const canDrag = !S.running && (S.t<1e-9 || S.done) && atStart;
     // 气垫阴影
     c.fillStyle='rgba(28,126,214,.10)';
     c.beginPath(); c.ellipse(cx, yRail+2, hw*1.06, 5, 0,0,7); c.fill();
     // 支承斜台
     c.fillStyle='rgba(0,0,0,.05)';
     c.beginPath(); c.moveTo(cx-hw, yRail); c.lineTo(cx-hw*0.55, yRail-8); c.lineTo(cx+hw*0.55, yRail-8); c.lineTo(cx+hw, yRail); c.closePath(); c.fill();
-    // 滑块体
+    // 滑块体（悬停/拖动时高亮）
     const g2=c.createLinearGradient(0,yRail-hSL,0,yRail);
-    g2.addColorStop(0,'#b6bbc1'); g2.addColorStop(1,'#8a9096');
+    if(hov||drg){ g2.addColorStop(0,'#ffd8d8'); g2.addColorStop(1,'#f0a0a0'); }
+    else{ g2.addColorStop(0,'#b6bbc1'); g2.addColorStop(1,'#8a9096'); }
     c.fillStyle=g2;
     c.beginPath(); c.roundRect(cx-hw, yRail-hSL, hw*2, hSL, 3); c.fill();
     c.strokeStyle='#6c737a'; c.lineWidth=1; c.stroke();
@@ -948,6 +983,14 @@ function render(){
     c.beginPath(); c.roundRect(cx-30, yRail-21, 60, 15, 3); c.fill();
     c.fillStyle='#495057'; c.font='bold 10.5px Consolas,monospace'; c.textAlign='center';
     c.fillText('m'+(i+1)+' = '+fx(s.m,3)+' kg', cx, yRail-10);
+    // 初始位置读数 + 拖动提示
+    if(canDrag){
+      c.fillStyle='rgba(224,49,49,.10)';
+      c.beginPath(); c.roundRect(cx-38, yRail-42, 76, 16, 3); c.fill();
+      c.strokeStyle='rgba(224,49,49,.45)'; c.lineWidth=1; c.stroke();
+      c.fillStyle='#a01818'; c.font='bold 9.5px Consolas,monospace';
+      c.fillText('x₀='+s.x.toFixed(3)+' m', cx, yRail-30);
+    }
   }
 
   /* --- 碰撞闪光与冲量 --- */
@@ -977,28 +1020,33 @@ function render(){
   c.fillStyle='#8a94a6';
   c.fillText('守恒条件：ΣFx = 0（气垫 μ≈'+fx(S.fric,3)+'）', PAD+156, 36);
 
-  /* --- 光电门读数：贴在各自光电门正上方，一门一块，不画交叉引线 --- */
+  /* --- 光电门读数：贴在各自光电门正上方，门正下方列出该门所有滑块挡光时间 --- */
   {
     const LBL_Y = yRail - 152;                 // 统一高度
-    for(let g=0; g<4; g++){
-      if(!S.gates[g]) continue;
-      const list = S.ev.filter(e=>e.g===g).sort((a,b)=>b.tc-a.tc).slice(0,2).reverse();
+    for(let g=0; g<2; g++){
+      const list = S.ev.filter(e=>e.g===g).sort((a,b)=>a.tc-b.tc);
       if(!list.length) continue;
       const gx = X(G_POS[g]);
-      // 每块分两行：一行一个滑块，字号加大
+      // 一行一个滑块，字号加大；碰撞后两滑块都过 G₂ 时会显示两行
       c.textAlign='center';
-      const rowH = 17;
+      const rowH = 18;
       list.forEach((e,i)=>{
-        const txt = '滑块'+(e.s+1)+'  Δt='+(e.dt*1000).toFixed(1)+' ms';
+        const tag = (g===1 && S.tCol!==null && e.tc>S.tCol) ? '后' : '前';
+        const txt = '滑块'+(e.s+1)+' '+tag+'  Δt='+(e.dt*1000).toFixed(1)+' ms';
         c.font='bold 11.5px "Microsoft YaHei"';
-        const w = Math.max(96, c.measureText(txt).width+14);
+        const w = Math.max(104, c.measureText(txt).width+14);
         const bx = clamp(gx-w/2, PAD-18, W-PAD-w+18);
         const by = LBL_Y + i*rowH;
-        c.fillStyle='rgba(47,158,68,.14)'; c.beginPath(); c.roundRect(bx, by, w, rowH-2, 4); c.fill();
-        c.strokeStyle='rgba(47,158,68,.55)'; c.lineWidth=1; c.stroke();
-        c.fillStyle='#186b2c'; c.fillText(txt, bx+w/2, by+12);
+        const isPost = (g===1 && S.tCol!==null && e.tc>S.tCol);
+        c.fillStyle = isPost ? 'rgba(247,103,7,.14)' : 'rgba(47,158,68,.14)';
+        c.beginPath(); c.roundRect(bx, by, w, rowH-2, 4); c.fill();
+        c.strokeStyle = isPost ? 'rgba(247,103,7,.6)' : 'rgba(47,158,68,.55)';
+        c.lineWidth=1; c.stroke();
+        c.fillStyle = isPost ? '#a8430a' : '#186b2c';
+        c.fillText(txt, bx+w/2, by+12);
         // 短竖线连到光电门
-        c.strokeStyle='rgba(47,158,68,.45)'; c.lineWidth=1;
+        c.strokeStyle = isPost ? 'rgba(247,103,7,.5)' : 'rgba(47,158,68,.45)';
+        c.lineWidth=1;
         c.beginPath(); c.moveTo(gx, by+rowH-2); c.lineTo(gx, yRail-126); c.stroke();
       });
     }
@@ -1030,9 +1078,15 @@ function updateKPI(){
   const cls = rel<0.03?'ok':rel<0.08?'warn':'bad';
   const word = rel<0.03?'✔ 系统动量守恒（在误差允许范围内）':rel<0.08?'△ 偏差偏大，请检查气垫与水平':'✘ 明显不守恒';
   const pair = r.meth1==='pair'||r.meth3==='pair';
-  // 各门挡光时间明细（滑块 × 门）
-  const blkRows = (r.blk||[]).map(b=>
-    `G${b.g}·滑块${b.s} Δt=${(b.dt*1000).toFixed(1)} ms`).join('　');
+
+  /* ★ 碰撞后两滑块的挡光时间（用户明确要求：滑块1、滑块2 都要输出）*/
+  const post1 = (r.blk||[]).filter(b=>b.g===2 && b.s===1);
+  const post2 = (r.blk||[]).filter(b=>b.g===2 && b.s===2);
+  const pre1  = (r.blk||[]).filter(b=>b.g===1 && b.s===1);
+  const dtPost1 = post1.length? post1[0].dt : null;
+  const dtPost2 = post2.length? post2[0].dt : null;
+  const dtPre1  = pre1.length ? pre1[0].dt  : null;
+  const cntPost = post1.length + post2.length;
 
   box.innerHTML = `
     <div class="kpi o"><div class="k">遮光片宽 d</div><div class="v">${fx(r.d*1000,1)}<span class="u">mm</span></div></div>
@@ -1040,21 +1094,27 @@ function updateKPI(){
     <div class="kpi"><div class="k">v₂ 碰撞前</div><div class="v">${r.v2p===null?'0.000':fx(r.v2p,3)}<span class="u">m/s</span></div></div>
     <div class="kpi r"><div class="k">v₁′ 碰撞后</div><div class="v">${fx(r.v1a,3)}<span class="u">m/s</span></div></div>
     <div class="kpi r"><div class="k">v₂′ 碰撞后</div><div class="v">${fx(r.v2a,3)}<span class="u">m/s</span></div></div>
-    <div class="kpi t"><div class="k">v̄₁前 = Δx/Δt<sub>12</sub></div><div class="v">${msTxt(r.dt1p)}<span class="u">ms</span></div></div>
-    <div class="kpi t"><div class="k">v̄₁′后 = Δx/Δt<sub>34</sub></div><div class="v">${msTxt(r.dt1a)}<span class="u">ms</span></div></div>
-    <div class="kpi t"><div class="k">v̄₂′后 = Δx/Δt<sub>34</sub></div><div class="v">${msTxt(r.dt2a)}<span class="u">ms</span></div></div>
+    <div class="kpi t"><div class="k">滑块1 过 G₁ 挡光时间（前）</div><div class="v">${msTxt(dtPre1)}<span class="u">ms</span></div></div>
+    <div class="kpi big o"><div class="k">★ 滑块1 过 G₂ 挡光时间（后）</div><div class="v">${msTxt(dtPost1)}<span class="u">ms</span></div></div>
+    <div class="kpi big o"><div class="k">★ 滑块2 过 G₂ 挡光时间（后）</div><div class="v">${msTxt(dtPost2)}<span class="u">ms</span></div></div>
     <div class="kpi g"><div class="k">p前 = m₁v₁+m₂v₂</div><div class="v">${fx(pB,4)}</div></div>
     <div class="kpi g"><div class="k">p后 = m₁v₁′+m₂v₂′</div><div class="v">${fx(pA,4)}</div></div>
     <div class="kpi big ${rel<0.03?'g':'o'}"><div class="k">相对误差 |ε<sub>相</sub>|</div><div class="v">${(rel*100).toFixed(2)}<span class="u">%</span></div></div>
     <div class="kpi p"><div class="k">Eₖ 前 → 后 / J</div><div class="v" style="font-size:20px">${fx(EB,4)} → ${fx(EA,4)}</div></div>`;
+
   const vd = document.createElement('div');
   vd.className = 'verdict '+cls;
   vd.innerHTML = `<div style="flex:1 1 100%;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
       <span style="font-size:16px">${word}</span>
-      <span style="font-weight:400;font-size:12px;color:#4a5568">测速法：${pair?'双门法 v=Δx/Δt':'单门法 v=d/Δt'}（含匀减速外推修正）｜ ΔEₖ = ${fx(EA-EB,4)} J ｜ 恢复系数 e = ${fx(r.e,2)}</span>
+      <span style="font-weight:400;font-size:12px;color:#4a5568">测速法：${pair?'双门法 v=Δx/Δt':'单门法 v=d/Δt'}（含匀减速外推修正）｜ ΔEₖ = ${fx(EA-EB,4)} J ｜ e = ${fx(r.e,2)}</span>
       <span class="big" style="margin-left:auto">${(rel*100).toFixed(2)}%</span>
     </div>
-    ${blkRows?`<div style="flex:1 1 100%;font-weight:400;font-size:12.5px;color:#2b6b3a;border-top:1px dashed rgba(0,0,0,.14);padding-top:7px;margin-top:2px"><b>各光电门挡光时间</b>（遮光片宽 d = ${fx(r.d*1000,1)} mm）：${blkRows}</div>`:''}`;
+    <div style="flex:1 1 100%;font-weight:400;font-size:13px;color:#2b6b3a;border-top:1px dashed rgba(0,0,0,.14);padding-top:8px;margin-top:3px">
+      <b>碰撞后各滑块通过光电门的挡光时间</b>（遮光片宽 d = ${fx(r.d*1000,1)} mm）：
+      滑块1 → G₂ 挡光 <b>${msTxt(dtPost1)} ms</b>　→　v₁′ = d/Δt = <b>${fx(r.d/(dtPost1||1),3)} m/s</b>（已外推修正）<br>
+      滑块2 → G₂ 挡光 <b>${msTxt(dtPost2)} ms</b>　→　v₂′ = d/Δt = <b>${fx(r.d/(dtPost2||1),3)} m/s</b>（已外推修正）
+      ${cntPost<2?'　<span style="color:#a01818">⚠ 有滑块未过G₂（碰撞后速度过小或停住，物理上无法测量）</span>':''}
+    </div>`;
   const kb = box.parentElement.querySelector('.verdict');
   if(kb) kb.remove();
   box.after(vd);
@@ -1450,12 +1510,136 @@ $('ctype').addEventListener('change',e=>{
   syncCtl(); freshSim(); render(); updateKPI();
 });
 
-$('gatesw').addEventListener('click',e=>{
-  const b=e.target.closest('button'); if(!b) return;
-  const g=+b.dataset.g;
-  if(S.gates[g] && S.gates.filter(Boolean).length===1){ toast('至少保留一个光电门'); return; }
-  S.gates[g]=!S.gates[g]; b.classList.toggle('on',S.gates[g]);
-  freshSim(); render();
+/* ══════════════════════════════════════════════════════
+   位置调整：滑块联动 + 画布拖动
+   ══════════════════════════════════════════════════════ */
+
+/* 推荐布置：G₁ 在碰撞点左侧，G₂ 在右侧，两滑块夹在中间 */
+function applyLayout(g1,g2,x1,x2){
+  G_POS[0]=g1; G_POS[1]=g2; X_S1_0=x1; X_S2_0=x2;
+  syncPos(); freshSim(); render(); updateKPI();
+}
+
+/* 拖动时的合法性约束：保证 G₁ < 碰撞点 < G₂，且滑块初始不重叠、不越界 */
+function constrain(which){
+  const half=L_SLIDE/2, lo=half+SLIDE_MARGIN, hi=L_TRACK-half-SLIDE_MARGIN;
+  if(which==='s1'||which==='s2'||which==='both'){
+    X_S1_0=clamp(X_S1_0,lo,hi);
+    X_S2_0=clamp(X_S2_0,lo,hi);
+    if(X_S2_0-X_S1_0 < L_SLIDE+0.04){          // 两滑块至少留 4 cm 间隙
+      if(which==='s1') X_S1_0=Math.max(lo, X_S2_0-L_SLIDE-0.04);
+      else            X_S2_0=Math.min(hi, X_S1_0+L_SLIDE+0.04);
+    }
+  }
+  const xc=xCol();
+  // G₁ 必须落在滑块1 右侧、碰撞点左侧；G₂ 必须落在碰撞点右侧、端部左侧
+  if(which==='g1'||which==='both'||which==='s1'||which==='s2'){
+    G_POS[0]=clamp(G_POS[0], X_S1_0+0.03, Math.max(X_S1_0+0.03, xc-0.06));
+  }
+  if(which==='g2'||which==='both'||which==='s2'){
+    G_POS[1]=clamp(G_POS[1], Math.min(xc+0.12, L_TRACK-0.06), L_TRACK-0.06);
+  }
+  if(G_POS[1]-G_POS[0] < 0.06) G_POS[1]=Math.min(L_TRACK-0.06, G_POS[0]+0.06);
+}
+
+function syncPos(){
+  $('v_g1').textContent=G_POS[0].toFixed(3)+' m';
+  $('v_g2').textContent=G_POS[1].toFixed(3)+' m';
+  $('v_x1').textContent=X_S1_0.toFixed(3)+' m';
+  $('v_x2').textContent=X_S2_0.toFixed(3)+' m';
+  $('g1pos').value=G_POS[0]; $('g2pos').value=G_POS[1];
+  $('s1pos').value=X_S1_0;   $('s2pos').value=X_S2_0;
+  // 布置是否合理
+  const xc=xCol();
+  const ok = G_POS[0] < xc && G_POS[1] > xc && G_POS[1]-G_POS[0] > 0.06;
+  const tip=$('layoutTip');
+  if(ok){
+    tip.innerHTML='当前布置 ✔ 合理：G₁ 在碰撞区左侧、G₂ 在右侧，两滑块夹在中间。碰撞点 x = <b>'+xc.toFixed(3)+' m</b>';
+    tip.style.color='var(--ink3)';
+  } else {
+    tip.innerHTML='⚠ 当前布置无法测全三个速度。需满足：G₁ &lt; 碰撞点 &lt; G₂。点击"恢复推荐布置"可一键复位。';
+    tip.style.color='#a8430a';
+  }
+}
+
+/* 画布坐标 ↔ 世界坐标 */
+function worldFromClient(clientX, clientY){
+  const rect=stage.getBoundingClientRect();
+  const W=rect.width, PAD=34, sc=(W-2*PAD)/L_TRACK;
+  const px=clientX-rect.left;
+  return {x:(px-PAD)/sc, px, py:clientY-rect.top, rect, W, sc};
+}
+
+/* 命中测试：返回可拖动对象 */
+function hitTest(clientX,clientY){
+  const p=worldFromClient(clientX,clientY);
+  const yRail=214, hSL=30, hBlade=44;
+  // 光电门立柱（y 从 yRail-118 到 yRail）
+  for(let g=0; g<2; g++){
+    const gx=G_POS[g]*p.sc + 34;
+    if(Math.abs(p.px-gx)<16 && p.py>yRail-122 && p.py<yRail+8) return {kind:'gate', idx:g};
+  }
+  // 滑块（仅初始/复位后可拖）
+  const atStart=(S.t<1e-9||S.done)&&!S.running;
+  if(atStart){
+    for(let i=0;i<2;i++){
+      const s=S.s[i], cx=s.x*p.sc+34, hw=L_SLIDE/2*p.sc;
+      if(Math.abs(p.px-cx)<=hw+4 && p.py>yRail-hSL-hBlade-8 && p.py<yRail+6)
+        return {kind:(i===0?'s1':'s2'), idx:i};
+    }
+  }
+  return null;
+}
+
+stage.addEventListener('mousemove',e=>{
+  if(S.drag){
+    const p=worldFromClient(e.clientX,e.clientY);
+    const v=p.x - (S.drag.off||0);
+    if(S.drag.kind==='gate'){ G_POS[S.drag.idx]=clamp(v,G_MIN,G_MAX); constrain('g'+String(S.drag.idx+1)); }
+    else if(S.drag.kind==='s1'){ X_S1_0=v; constrain('s1'); }
+    else if(S.drag.kind==='s2'){ X_S2_0=v; constrain('s2'); }
+    S.s[0].x=X_S1_0; S.s[1].x=X_S2_0;
+    syncPos(); render();
+    return;
+  }
+  const h=hitTest(e.clientX,e.clientY);
+  const key = h ? h.kind+ (h.idx!==undefined?h.idx:'') : null;
+  if(key!==S.hover){ S.hover=h; render(); }
+  stage.style.cursor = h ? 'grab' : 'default';
+});
+
+stage.addEventListener('mousedown',e=>{
+  const h=hitTest(e.clientX,e.clientY);
+  if(!h) return;
+  e.preventDefault();
+  const p=worldFromClient(e.clientX,e.clientY);
+  const cur = h.kind==='gate' ? G_POS[h.idx] : (h.kind==='s1'?X_S1_0:X_S2_0);
+  S.drag = {kind:h.kind, idx:h.idx, off:p.x-cur};
+  S.running=false; $('bPlay').textContent='▶ 启动实验';
+  stage.style.cursor='grabbing';
+});
+
+window.addEventListener('mouseup',e=>{
+  if(!S.drag) return;
+  S.drag=null; stage.style.cursor='default';
+  freshSim(); syncPos(); render(); updateKPI();
+  $('runState').innerHTML='状态：待启动（位置已调整，点击"启动实验"重新测量）';
+});
+
+stage.addEventListener('mouseleave',()=>{ if(!S.drag && S.hover){ S.hover=null; render(); } });
+
+/* 滑块联动 */
+[['g1pos',()=>{G_POS[0]=parseFloat($('g1pos').value); constrain('g1');}],
+ ['g2pos',()=>{G_POS[1]=parseFloat($('g2pos').value); constrain('g2');}],
+ ['s1pos', ()=>{X_S1_0=parseFloat($('s1pos').value);  constrain('s1');}],
+ ['s2pos', ()=>{X_S2_0=parseFloat($('s2pos').value);  constrain('s2');}]
+].forEach(([id,fn])=>{
+  $(id).addEventListener('input',()=>{ fn(); S.s[0].x=X_S1_0; S.s[1].x=X_S2_0; syncPos(); freshSim(); render(); });
+});
+$('bLayout').addEventListener('click',()=>{
+  const xc=0.490-L_SLIDE;                      // 碰撞点回到 0.400
+  applyLayout(Math.min(0.150,xc-0.20), 0.620, 0.064, 0.490);
+  toast('已恢复推荐布置');
 });
 
 $('bPlay').addEventListener('click',()=>{
@@ -1564,7 +1748,7 @@ function loop(now){
 
 /* 初始化：临时显示各面板以获取正确 canvas 宽度，绘制后再还原
    ★ 必须用 class 而非内联 style，否则会覆盖 .tabpane.on 的 display 规则 */
-syncCtl(); freshSim(); render(); updateKPI();
+syncCtl(); freshSim(); render(); updateKPI(); syncPos();
 function paintPane(id, draw){
   const pane=$(id);
   if(pane.classList.contains('on')){ draw(); return; }

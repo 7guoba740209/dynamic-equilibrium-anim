@@ -588,7 +588,7 @@ const S = {
   results:null,     // 本次测量结果
   data:[],          // 多组数据
   seq:0,
-  flash:0, flashX:0, impJ:0,
+  flash:0, flashX:0, impJ:0, bondX:0, bondT:null, bondFlash:0,
   drag:null,        // {kind:'gate'|'s1'|'s2', idx, off}
   hover:null        // 悬停高亮
 };
@@ -601,7 +601,7 @@ function freshSim(){
   S.t=0; S.collided=false; S.tCol=null; S.bonded=false; S.done=false;
   S.nCol=0; S.hitBuf=[false,false]; S.tCollect=null;
   S.ev=[]; S.hist=[]; S.results=null;
-  S.flash=0; S.flashX=0; S.impJ=0;
+  S.flash=0; S.flashX=0; S.impJ=0; S.bondX=0; S.bondT=null; S.bondFlash=0;
   sample();
 }
 
@@ -656,22 +656,40 @@ function checkGates(sIdx, prevX, newX, tPrev, tNow){
 function collide(){
   const [a,b]=S.s;
   const gap = (b.x - L_SLIDE/2) - (a.x + L_SLIDE/2);
-  if(gap <= 0 && !S.bonded){
+  if(S.bonded){
+    // ★ 黏结体：整体匀速，并【严格锁定相对位置】
+    //   完全非弹性碰撞后两滑块焊成一块，绝不能留缝 —— 视觉上必须是"一个整体"
+    const v = (a.m*a.v + b.m*b.v)/(a.m+b.m);
+    a.v = v; b.v = v;
+    // ★ d = b.x - a.x 是【中心距】；两面贴合时中心距 = 2×滑块长（不是 1×！）
+    const d = b.x - a.x;
+    const target = 2*L_SLIDE;
+    if(Math.abs(d - target) > 1e-12){
+      const half=(d - target)/2;
+      a.x += half; b.x -= half;
+    }
+    return;
+  }
+  if(gap <= 0){
     const u = a.v - b.v;
     if(u <= 0) return;                       // 分离中，不处理
     const mu = a.m*b.m/(a.m+b.m);
     const J = (1+S.e)*mu*u;                  // 冲量大小（动量单位）
     a.v -= J/a.m; b.v += J/b.m;
-    // 位置分离，避免重复检测
-    const push = (L_SLIDE - gap)/2 + 1e-6;
-    a.x -= push; b.x += push;
     S.nCol++;
     if(S.nCol===1){ S.collided = true; S.tCol = S.t; S.flash=1; S.flashX=(a.x+b.x)/2; S.impJ=J; }
-    if(S.e <= 0.02){ S.bonded = true; }
-  } else if(S.bonded){
-    // 黏结体：整体匀速，锁定相对位置
-    const v = (a.m*a.v + b.m*b.v)/(a.m+b.m);
-    a.v = v; b.v = v;
+    if(S.e <= 0.02){
+      S.bonded = true;
+      // ★ 焊成一体的瞬间：把两者推到"恰好贴合"（面面接触，缝隙严格为 0）
+      const shift = (2*L_SLIDE - (b.x - a.x))/2;
+      a.x -= shift; b.x += shift;
+      S.bondX = (a.x + b.x)/2;
+      S.bondT = S.t;
+    } else {
+      // 弹性/非完全弹性：位置分离，避免重复检测
+      const push = (L_SLIDE - gap)/2 + 1e-6;
+      a.x -= push; b.x += push;
+    }
   }
 }
 
@@ -941,59 +959,122 @@ function render(){
     }
   }
 
-  /* --- 滑块（初始位置可拖动） --- */
+  /* --- 滑块（完全非弹性碰撞后焊成一块，画成整体） --- */
   const hSL=30, hBlade=44;
+  const bonded = S.bonded;
+
+  /* ★ 黏结体的"焊合"特效：接缝处画焊接光带 + 整体轮廓包边
+     画在滑块之下，视觉上把两块锁成一个不可分割的整体 */
+  if(bonded){
+    const x1=X(S.s[0].x), x2=X(S.s[1].x);
+    const xa=x1-L_SLIDE/2*sc, xb=x2+L_SLIDE/2*sc, seam=(x1+x2)/2;
+    // 整体外包框（绿色，粗）—— 两块连成一条整体滑块
+    c.strokeStyle='rgba(46,125,50,.9)'; c.lineWidth=2.2;
+    c.beginPath(); c.roundRect(xa, yRail-hSL-5, xb-xa, hSL+5, 4); c.stroke();
+    // 接缝焊接光带：竖向绿光，明确"粘在一起"
+    c.strokeStyle='rgba(37,178,76,.35)'; c.lineWidth=9;
+    c.beginPath(); c.moveTo(seam, yRail-hSL-3); c.lineTo(seam, yRail+3); c.stroke();
+    // "已黏结"小徽标：贴在整体外框右上角
+    c.font='bold 10px "Microsoft YaHei"'; c.textAlign='center';
+    const badgeW=c.measureText('✔ 已黏结').width+14;
+    const bx=xb-badgeW/2;
+    c.fillStyle='rgba(46,125,50,.96)';
+    c.beginPath(); c.roundRect(bx, yRail-hSL-26, badgeW, 17, 4); c.fill();
+    c.fillStyle='#fff'; c.fillText('✔ 已黏结', bx+badgeW/2, yRail-hSL-14);
+  }
+
   for(let i=0;i<2;i++){
     const s = S.s[i];
     const cx = X(s.x), hw = L_SLIDE/2*sc;
     if(cx<-60||cx>W+60) continue;
-    const hov = S.hover && S.hover.kind===(i===0?'s1':'s2');
-    const drg = S.drag  && S.drag.kind===(i===0?'s1':'s2');
+    const hov = !bonded && S.hover && S.hover.kind===(i===0?'s1':'s2');
+    const drg = !bonded && S.drag  && S.drag.kind===(i===0?'s1':'s2');
     const atStart = Math.abs(s.x - (i===0?X_S1_0:X_S2_0)) < 1e-9;
     // 只在未开始/已复位时提示可拖动
-    const canDrag = !S.running && (S.t<1e-9 || S.done) && atStart;
+    const canDrag = !bonded && !S.running && (S.t<1e-9 || S.done) && atStart;
     // 气垫阴影
     c.fillStyle='rgba(28,126,214,.10)';
     c.beginPath(); c.ellipse(cx, yRail+2, hw*1.06, 5, 0,0,7); c.fill();
     // 支承斜台
     c.fillStyle='rgba(0,0,0,.05)';
     c.beginPath(); c.moveTo(cx-hw, yRail); c.lineTo(cx-hw*0.55, yRail-8); c.lineTo(cx+hw*0.55, yRail-8); c.lineTo(cx+hw, yRail); c.closePath(); c.fill();
-    // 滑块体（悬停/拖动时高亮）
+    // 滑块体（悬停/拖动时高亮；黏结后两半同一配色，以示一体）
     const g2=c.createLinearGradient(0,yRail-hSL,0,yRail);
     if(hov||drg){ g2.addColorStop(0,'#ffd8d8'); g2.addColorStop(1,'#f0a0a0'); }
+    else if(bonded){ g2.addColorStop(0,'#9aa4b0'); g2.addColorStop(1,'#6f7a86'); }
     else{ g2.addColorStop(0,'#b6bbc1'); g2.addColorStop(1,'#8a9096'); }
     c.fillStyle=g2;
-    c.beginPath(); c.roundRect(cx-hw, yRail-hSL, hw*2, hSL, 3); c.fill();
-    c.strokeStyle='#6c737a'; c.lineWidth=1; c.stroke();
-    // 顶板
-    c.fillStyle='#727980';
-    c.beginPath(); c.roundRect(cx-hw*0.92, yRail-hSL-5, hw*1.84, 8, 2); c.fill();
+    if(bonded){
+      // ★ 黏结：贴合面不画外框、也不倒角，两块拼起来是一个完整矩形轮廓
+      c.beginPath();
+      if(i===0) c.rect(cx-hw, yRail-hSL, hw*2, hSL);
+      else      c.rect(cx-hw, yRail-hSL, hw*2, hSL);
+      c.fill();
+      c.strokeStyle='#5c656f'; c.lineWidth=1;
+      if(i===0){ c.beginPath(); c.moveTo(cx-hw,yRail); c.lineTo(cx-hw,yRail-hSL); c.moveTo(cx-hw,yRail-hSL); c.lineTo(cx+hw,yRail-hSL); c.moveTo(cx-hw,yRail); c.lineTo(cx+hw,yRail); c.stroke(); }
+      else{ c.beginPath(); c.moveTo(cx-hw,yRail-hSL); c.lineTo(cx+hw,yRail-hSL); c.moveTo(cx+hw,yRail-hSL); c.lineTo(cx+hw,yRail); c.moveTo(cx-hw,yRail); c.lineTo(cx+hw,yRail); c.stroke(); }
+      // 接缝处的焊接标记：竖向粗带 + 焊点，明确"粘在一起"
+      const seam = (i===0) ? cx+hw : cx-hw;
+      c.strokeStyle='rgba(37,64,38,.95)'; c.lineWidth=3.4;
+      c.beginPath(); c.moveTo(seam, yRail-hSL+2); c.lineTo(seam, yRail-2); c.stroke();
+      c.fillStyle='#254e28';
+      c.beginPath(); c.arc(seam, yRail-9, 3.1, 0, 7); c.fill();
+      c.beginPath(); c.arc(seam, yRail-hSL+8, 3.1, 0, 7); c.fill();
+      c.strokeStyle='rgba(255,255,255,.55)'; c.lineWidth=0.9;
+      c.beginPath(); c.arc(seam, yRail-9, 3.1, -2.2, -0.4); c.stroke();
+      c.beginPath(); c.arc(seam, yRail-hSL+8, 3.1, -2.2, -0.4); c.stroke();
+    } else {
+      c.beginPath(); c.roundRect(cx-hw, yRail-hSL, hw*2, hSL, 3); c.fill();
+      c.strokeStyle='#6c737a'; c.lineWidth=1; c.stroke();
+    }
+    // 顶板（黏结后两顶板连成一条通长）
+    c.fillStyle= bonded ? '#6a7480' : '#727980';
+    if(bonded){
+      const xa=X(S.s[0].x)-L_SLIDE/2*sc, xb=X(S.s[1].x)+L_SLIDE/2*sc;
+      c.beginPath(); c.roundRect(xa+2, yRail-hSL-5, xb-xa-4, 8, 2); c.fill();
+      c.strokeStyle='rgba(46,125,50,.85)'; c.lineWidth=1.6; c.stroke();
+    } else {
+      c.beginPath(); c.roundRect(cx-hw*0.92, yRail-hSL-5, hw*1.84, 8, 2); c.fill();
+    }
     // 遮光片
     const bw = Math.max(4, S.blade*sc);
     c.fillStyle = i===0? '#e03131' : '#1c7ed6';
     c.beginPath(); c.roundRect(cx-bw/2, yRail-hSL-5-hBlade, bw, hBlade+3, 1.5); c.fill();
     c.fillStyle='rgba(255,255,255,.28)';
     c.fillRect(cx-bw/2, yRail-hSL-5-hBlade, bw*0.42, hBlade+3);
-    // 速度箭头（画在遮光片上方，与读数浮窗分层不重叠）
+    // 速度箭头（黏结后只在整体中心画一个，表示两者同速）
     const vs=Math.abs(s.v);
-    if(vs>0.012){
+    const showArrow = vs>0.012 && (!bonded || i===1);
+    if(showArrow){
+      const ax0 = bonded ? (X(S.s[0].x)+X(S.s[1].x))/2 : cx;
       const len = clamp(vs/Math.max(S.vi1,0.2)*46, 12, 96);
       const dir = Math.sign(s.v);
       const ay = yRail-hSL-hBlade-16;
       c.strokeStyle='#f76707'; c.lineWidth=2.6; c.lineCap='round';
-      c.beginPath(); c.moveTo(cx, ay); c.lineTo(cx+dir*len, ay); c.stroke();
+      c.beginPath(); c.moveTo(ax0, ay); c.lineTo(ax0+dir*len, ay); c.stroke();
       c.fillStyle='#f76707'; c.beginPath();
-      c.moveTo(cx+dir*len, ay);
-      c.lineTo(cx+dir*(len-7), ay-4.4); c.lineTo(cx+dir*(len-7), ay+4.4); c.closePath(); c.fill();
+      c.moveTo(ax0+dir*len, ay);
+      c.lineTo(ax0+dir*(len-7), ay-4.4); c.lineTo(ax0+dir*(len-7), ay+4.4); c.closePath(); c.fill();
       c.font='bold 10.5px Consolas,monospace'; c.textAlign=dir>0?'left':'right';
       c.fillStyle='#a8430a';
-      c.fillText((s.v>0?'+':'')+fx(s.v,2)+' m/s', cx+dir*(len+6), ay+3.5);
+      c.fillText((s.v>0?'+':'')+fx(s.v,2)+' m/s', ax0+dir*(len+6), ay+3.5);
     }
-    // 质量标签
-    c.fillStyle='rgba(255,255,255,.94)';
-    c.beginPath(); c.roundRect(cx-30, yRail-21, 60, 15, 3); c.fill();
-    c.fillStyle='#495057'; c.font='bold 10.5px Consolas,monospace'; c.textAlign='center';
-    c.fillText('m'+(i+1)+' = '+fx(s.m,3)+' kg', cx, yRail-10);
+    // 质量标签（黏结后只标一次"整体"，不再分标m₁/m₂）
+    if(bonded){
+      if(i===1){
+        const seam=(X(S.s[0].x)+X(S.s[1].x))/2;
+        const M=(S.s[0].m+S.s[1].m);
+        c.fillStyle='rgba(46,125,50,.95)';
+        c.beginPath(); c.roundRect(seam-42, yRail-22, 84, 16, 3); c.fill();
+        c.fillStyle='#fff'; c.font='bold 10.5px Consolas,monospace'; c.textAlign='center';
+        c.fillText('m = '+fx(M,3)+' kg', seam, yRail-10);
+      }
+    } else {
+      c.fillStyle='rgba(255,255,255,.94)';
+      c.beginPath(); c.roundRect(cx-30, yRail-21, 60, 15, 3); c.fill();
+      c.fillStyle='#495057'; c.font='bold 10.5px Consolas,monospace'; c.textAlign='center';
+      c.fillText('m'+(i+1)+' = '+fx(s.m,3)+' kg', cx, yRail-10);
+    }
     // 初始位置读数 + 拖动提示
     if(canDrag){
       c.fillStyle='rgba(224,49,49,.10)';
@@ -1014,6 +1095,28 @@ function render(){
     c.fillStyle='rgba(247,103,7,'+a+')'; c.font='bold 12px "Microsoft YaHei"'; c.textAlign='center';
     c.fillText('J = '+fx(S.impJ,3)+' N·s', fx0, yRail-88);
     c.fillText('Δt碰 ≈ 10 ms', fx0, yRail-72);
+    if(S.bonded){
+      // 完全非弹性：明确写出"已黏成一体"
+      c.fillStyle='rgba(46,125,50,'+a+')'; c.font='bold 13px "Microsoft YaHei"';
+      c.fillText('✔ 完全非弹性 · 已黏结', fx0, yRail-56);
+    }
+  }
+
+  /* ★ 接缝前景标记（画在滑块之上）—— 让"粘在一起"一眼可见 */
+  if(bonded){
+    const seam=(X(S.s[0].x)+X(S.s[1].x))/2;
+    // 上下端头：接缝上下伸出短臂，把两块的边界"缝合"起来
+    c.strokeStyle='rgba(37,178,76,.55)'; c.lineWidth=5;
+    c.beginPath(); c.moveTo(seam, yRail-hSL-5); c.lineTo(seam, yRail+3); c.stroke();
+    c.strokeStyle='rgba(46,125,50,.95)'; c.lineWidth=1.6;
+    c.beginPath(); c.moveTo(seam, yRail-hSL-5); c.lineTo(seam, yRail+3); c.stroke();
+    // 两端小圆铆钉
+    c.fillStyle='#1b5e20';
+    c.beginPath(); c.arc(seam, yRail-hSL-7, 3.4, 0, 7); c.fill();
+    c.beginPath(); c.arc(seam, yRail+3, 3.4, 0, 7); c.fill();
+    c.fillStyle='rgba(255,255,255,.6)';
+    c.beginPath(); c.arc(seam-0.9, yRail-hSL-8.1, 1.2, 0, 7); c.fill();
+    c.beginPath(); c.arc(seam-0.9, yRail+1.9, 1.2, 0, 7); c.fill();
   }
 
   /* --- 顶部信息条 --- */

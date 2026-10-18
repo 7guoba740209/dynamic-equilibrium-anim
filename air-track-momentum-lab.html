@@ -169,7 +169,7 @@ i{font-style:italic}
 <div class="col">
   <div>
     <div class="card">
-      <h2>气垫导轨仿真实验台<span class="hint">导轨长 1.20 m ｜ 滑块长 9 cm ｜ 碰撞点 x = 0.40 m ｜ G₁G₂（碰撞前，间距 0.12 m）· G₃G₄（碰撞后，间距 0.12 m）</span></h2>
+      <h2>气垫导轨仿真实验台<span class="hint">导轨长 1.20 m ｜ 滑块长 9 cm ｜ 碰撞点 x = 0.40 m ｜ G₁G₂（碰撞前，Δx = 0.12 m）· G₃G₄（碰撞后，Δx = 0.15 m）</span></h2>
       <canvas id="stage" height="330"></canvas>
       <div class="legend">
         <span><i style="background:#e03131"></i>滑块1（入射）</span>
@@ -468,7 +468,7 @@ i{font-style:italic}
 
     <div class="charts" style="margin-top:14px">
       <div class="chbox"><h3>★ 为什么必须用双门法：计时分辨率误差对比</h3><canvas id="ce1" height="235"></canvas>
-        <div class="desc">光电门计时器分辨率约 <b>0.5 ms</b>。遮光片宽 <i>d</i> = 10 mm、<i>v</i> = 0.8 m/s 时，单门法挡光仅 <b>12.5 ms</b>，相对计时误差高达 <b>4.0%</b>；双门法 Δ<i>t</i> ≈ 150 ms，误差降到 <b>0.33%</b>——相差一个数量级。这是"能用双门法就别用单门法"的决定性理由。</div></div>
+        <div class="desc">光电门计时器分辨率约 <b>0.5 ms</b>。遮光片宽 <i>d</i> = 10 mm、<i>v</i> = 0.8 m/s 时，单门法挡光仅 <b>12.5 ms</b>，相对计时误差高达 <b>4.0%</b>；双门法 Δ<i>x</i> = 0.12 m 时 Δ<i>t</i> ≈ 150 ms（误差 0.33%），Δ<i>x</i> = 0.15 m 时 Δ<i>t</i> ≈ 190 ms（误差 0.26%）——相差一个数量级。这是"能用双门法就别用单门法"的决定性理由。</div></div>
       <div class="chbox"><h3>改进对比：残余摩擦对守恒精度的影响</h3><canvas id="ce2" height="235"></canvas>
         <div class="desc">不做外推修正时，摩擦越大守恒误差越大（μ=0.02 时达 28%，结论不可靠）；<b>做匀减速外推修正后，μ 从 0 到 0.02 误差始终 &lt; 0.001%</b>。橙色为未修正，绿色为已修正。</div></div>
     </div>
@@ -528,9 +528,9 @@ i{font-style:italic}
 const L_TRACK = 1.20;      // 导轨总长 (m) —— G₄ 右侧留0.52 m 余量；滑块采齐数据即终止，不必很长
 const L_SLIDE = 0.090;     // 滑块长度 (m)
 /* 装置几何：碰撞点固定在 x = 0.400 m
-   G₁G₂ 在碰撞前（间距 0.12 m），G₃G₄ 在碰撞后（间距 0.12 m）
+   G₁G₂ 在碰撞前（间距 0.12 m），G₃G₄ 在碰撞后（间距 0.15 m，留足读数标签显示空间）
    → 碰撞前后各有一对门，可分别做双门法测速 */
-const G_POS   = [0.150, 0.270, 0.560, 0.680];
+const G_POS   = [0.150, 0.270, 0.545, 0.695];
 const X_S1_0  = 0.064;     // 滑块1 初始中心位置
 const X_S2_0  = 0.490;     // 滑块2 初始中心位置
 const X_COL   = X_S2_0 - L_SLIDE;   // 固定碰撞点 x = 0.400 m
@@ -977,26 +977,30 @@ function render(){
   c.fillStyle='#8a94a6';
   c.fillText('守恒条件：ΣFx = 0（气垫 μ≈'+fx(S.fric,3)+'）', PAD+156, 36);
 
-  /* --- 光电门读数浮窗（纵向排在画布左侧，互不重叠） --- */
+  /* --- 光电门读数：贴在各自光电门正上方，一门一块，不画交叉引线 --- */
   {
-    let fy=50;
+    const LBL_Y = yRail - 152;                 // 统一高度
     for(let g=0; g<4; g++){
       if(!S.gates[g]) continue;
       const list = S.ev.filter(e=>e.g===g).sort((a,b)=>b.tc-a.tc).slice(0,2).reverse();
       if(!list.length) continue;
-      const txt = list.map(e=>'滑块'+(e.s+1)+'  Δt='+(e.dt*1000).toFixed(1)+' ms').join('   ｜   ');
-      c.font='10px "Microsoft YaHei"'; c.textAlign='left';
-      const w = c.measureText(txt).width+16;
-      const bxr = PAD-16;
-      c.fillStyle='rgba(47,158,68,.10)'; c.beginPath(); c.roundRect(bxr, fy, w, 18, 4); c.fill();
-      c.strokeStyle='rgba(47,158,68,.5)'; c.lineWidth=1; c.stroke();
-      c.fillStyle='#1e6b30'; c.fillText(txt, bxr+8, fy+13);
-      // 引线到对应光电门
-      const gx=X(G_POS[g]);
-      c.strokeStyle='rgba(47,158,68,.35)'; c.setLineDash([2,2]);
-      c.beginPath(); c.moveTo(bxr+w, fy+9); c.lineTo(gx, yRail-130); c.stroke(); c.setLineDash([]);
-      fy += 21;
-      if(fy>150) break;
+      const gx = X(G_POS[g]);
+      // 每块分两行：一行一个滑块，字号加大
+      c.textAlign='center';
+      const rowH = 17;
+      list.forEach((e,i)=>{
+        const txt = '滑块'+(e.s+1)+'  Δt='+(e.dt*1000).toFixed(1)+' ms';
+        c.font='bold 11.5px "Microsoft YaHei"';
+        const w = Math.max(96, c.measureText(txt).width+14);
+        const bx = clamp(gx-w/2, PAD-18, W-PAD-w+18);
+        const by = LBL_Y + i*rowH;
+        c.fillStyle='rgba(47,158,68,.14)'; c.beginPath(); c.roundRect(bx, by, w, rowH-2, 4); c.fill();
+        c.strokeStyle='rgba(47,158,68,.55)'; c.lineWidth=1; c.stroke();
+        c.fillStyle='#186b2c'; c.fillText(txt, bx+w/2, by+12);
+        // 短竖线连到光电门
+        c.strokeStyle='rgba(47,158,68,.45)'; c.lineWidth=1;
+        c.beginPath(); c.moveTo(gx, by+rowH-2); c.lineTo(gx, yRail-126); c.stroke();
+      });
     }
   }
 }
@@ -1366,7 +1370,7 @@ function drawErrCharts(){
     const dtr=0.0005, v=0.80;                       // 计时分辨率 0.5 ms
     const ds=[]; for(let d=4;d<=30;d+=1) ds.push(d/1000);
     const eSing=ds.map(d=> dtr/(d/v)*100);          // 单门法：Δt = d/v
-    const ePair=ds.map(()=> dtr/(0.12/v)*100);       // 双门法：Δt = Δx/v = 0.12/0.8
+    const ePair=ds.map(()=> dtr/(0.12/v)*100);       // 双门法（碰撞前 Δx=0.12 m）：Δt = Δx/v
     const mx=Math.max(11,...eSing)*1.1;
     axes(c,W,235,P,'相对误差 ε / %','遮光片宽度 d / mm');
     gridY(c,W,235,P,0,mx,mx/6); gridX(c,W,235,P,4,30,4);

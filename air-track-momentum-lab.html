@@ -557,8 +557,11 @@ let X_S1_0  = 0.064;             // 滑块1 初始中心（可拖动）
 let X_S2_0  = 0.490;             // 滑块2 初始中心（可拖动）
 const DT      = 5e-5;      // 积分步长 (s)
 const G_ACC   = 9.8;
-const T_WIN   = 1.8;       // 碰撞后有效测速时间窗 (s)
-const T_TAIL  = 0.35;      // 预留字段（当前终止逻辑已不需要）
+/* 碰撞后运动时长：原1.8 s，现按用户要求延长一倍 → 3.6 s
+   ★ 注意：窗口拉长后，撞缓冲反弹产生的【二次过门】(约 2.58 s) 会落进窗口内，
+     因此 velocityOf 里额外按 hitBuf 过滤（只用撞缓冲之前的第一个过门事件），
+     不能只依赖时间窗上界把反射事件挡在外面。*/
+const T_WIN   = 3.6;       // 碰撞后有效时间窗 (s)
 
 /* 拖动约束 */
 const G_MIN  = 0.055, G_MAX  = L_TRACK-0.055;      // 门可拖动范围
@@ -581,7 +584,7 @@ const S = {
   e:1.00, blade:0.010, fric:0.004, speed:0.6,
   ctype:'elastic',
   running:false, t:0, done:false, collided:false, tCol:null,
-  bonded:false, x:0,
+  bonded:false, x:0, tBuf:[null,null],
   s:null,           // 两个滑块状态
   ev:[],            // 遮光事件
   hist:[],          // 采样历史
@@ -599,7 +602,7 @@ function freshSim(){
     {m:S.m2, x:X_S2_0, v:S.vi2, col:'#1c7ed6', blocked:[false,false]}
   ];
   S.t=0; S.collided=false; S.tCol=null; S.bonded=false; S.done=false;
-  S.nCol=0; S.hitBuf=[false,false]; S.tCollect=null;
+  S.nCol=0; S.hitBuf=[false,false]; S.tBuf=[null,null]; S.tCollect=null;
   S.ev=[]; S.hist=[]; S.results=null;
   S.flash=0; S.flashX=0; S.impJ=0; S.bondX=0; S.bondT=null; S.bondFlash=0;
   sample();
@@ -713,11 +716,12 @@ function step(h){
   const p1=a.x, p2=b.x;
   a.x += a.v*h; b.x += b.v*h;
 
-  // 端部缓冲：碰过即标记（反射数据会污染测速，用于提前终止）
-  if(a.x - L_SLIDE/2 < 0.002){ a.x = 0.002+L_SLIDE/2; a.v = Math.abs(a.v)*0.25; S.hitBuf[0]=true; }
-  if(b.x + L_SLIDE/2 > L_TRACK-0.002){ b.x = L_TRACK-0.002-L_SLIDE/2; b.v = -Math.abs(b.v)*0.25; S.hitBuf[1]=true; }
-  if(a.x + L_SLIDE/2 > L_TRACK-0.002){ a.x = L_TRACK-0.002-L_SLIDE/2; a.v = -Math.abs(a.v)*0.25; S.hitBuf[0]=true; }
-  if(b.x - L_SLIDE/2 < 0.002){ b.x = 0.002+L_SLIDE/2; b.v = Math.abs(b.v)*0.25; S.hitBuf[1]=true; }
+  /* 端部缓冲：记录【首次撞缓冲时刻】—— velocityOf 靠它剔除反射后的二次过门事件 */
+  const markBuf=(i)=>{ if(!S.hitBuf[i]){ S.hitBuf[i]=true; S.tBuf[i]=S.t; } };
+  if(a.x - L_SLIDE/2 < 0.002){ a.x = 0.002+L_SLIDE/2; a.v = Math.abs(a.v)*0.25; markBuf(0); }
+  if(b.x + L_SLIDE/2 > L_TRACK-0.002){ b.x = L_TRACK-0.002-L_SLIDE/2; b.v = -Math.abs(b.v)*0.25; markBuf(1); }
+  if(a.x + L_SLIDE/2 > L_TRACK-0.002){ a.x = L_TRACK-0.002-L_SLIDE/2; a.v = -Math.abs(a.v)*0.25; markBuf(0); }
+  if(b.x - L_SLIDE/2 < 0.002){ b.x = 0.002+L_SLIDE/2; b.v = Math.abs(b.v)*0.25; markBuf(1); }
 
   checkGates(0, p1, a.x, tP, S.t+h);
   checkGates(1, p2, b.x, tP, S.t+h);
@@ -737,19 +741,18 @@ function advance(dur){
   if(S.flash>0) S.flash = Math.max(0, S.flash - 0.035);
   if(S.done) return;
 
-  /* 终止判定：两个滑块都过 G₂ 才收尾（碰撞后速度都在用）
-     ★ 关键：不能用"按当前速度估算剩余时间"的方式提前收尾 ——
-       减速中每次重估都会偏小，导致慢滑块永远走不到门就被停掉。
-       改为：只要还没都过门，就一直等到时间窗 T_WIN 结束。
-       期间撞缓冲产生的二次过门会被 T_WIN 上界滤掉（velocityOf 只取最早事件），
-       所以等待是安全的。                                              */
+  /* 终止判定：碰撞后【完整跑满 T_WIN】才收尾
+     ★ 用户要求碰撞后运动时间延长一倍（1.8 s → 3.6 s），即要【真正跑够时间】，
+       而不是把上限放宽就提前结束。所以"两滑块都过 G₂"之后还要继续跑，
+       让课堂上能看清黏结/分离后的持续运动过程。
+     ★ 二次碰撞【不】触发终止：滑块1 反弹后追上滑块2 是真实物理过程，
+       撞缓冲/二次碰撞产生的事件都会被 velocityOf 按 hitBuf/tBuf 过滤，
+       所以"多跑"不会污染测速。                                          */
   const tc = S.tCol;
   if(tc!==null && S.t > tc + 0.06){
-    const passed = si => S.ev.some(e=>e.s===si && e.g===1 && e.tc>tc && e.tc<tc+T_WIN);
-    if(passed(0) && passed(1)){ finish(); return; }
-    if(S.nCol>=2 || S.t>tc+T_WIN){ finish(); return; }
+    if(S.t > tc + T_WIN){ finish(); return; }
   }
-  if(S.t > 8){ finish(); return; }
+  if(S.t > 10){ finish(); return; }
 }
 
 /* ══════════════════════════════════════════════════════
@@ -800,7 +803,19 @@ function velocityOf(sIdx, phase){
     return pick(list.slice(-1));
   }
   if(tc===null) return null;
-  list = list.filter(e=>e.tc>tc && e.tc<tc+T_WIN).sort((a,b)=>a.tc-b.tc);
+  /* ★ 碰撞后取事件：三重保险
+     ① 时刻在碰撞之后、窗口之内
+     ② 【该滑块在这次过门前没有撞过缓冲】—— 反射后的二次过门必须排除
+        （窗口拉长到 3.6 s 后二次过门约 2.58 s，单靠时间窗挡不住了）
+     ③ 只取【最早】的两个事件（双重保险）                              */
+  list = list.filter(e=>e.tc>tc && e.tc<tc+T_WIN);
+  if(S.hitBuf[sIdx]){
+    const tb = S.tBuf ? S.tBuf[sIdx] : null;
+    // 撞缓冲时刻之后的事件一律作废（反射造成）
+    if(tb!==null && tb!==undefined) list = list.filter(e=>e.tc < tb);
+    else list = list.filter(()=>false);   // 撞过但没记时刻（异常）→ 保守作废
+  }
+  list.sort((a,b)=>a.tc-b.tc);
   if(!list.length) return null;
   return pick(list.slice(0,2));
 }
@@ -1122,7 +1137,8 @@ function render(){
   /* --- 顶部信息条 --- */
   const [a,b]=S.s;
   c.font='12px Consolas,monospace'; c.textAlign='left';
-  c.fillStyle='#f4f6f9'; c.beginPath(); c.roundRect(PAD-16, 6, 380, 38, 6); c.fill();
+  const infoH = S.done ? 54 : 38;
+  c.fillStyle='#f4f6f9'; c.beginPath(); c.roundRect(PAD-16, 6, 620, infoH, 6); c.fill();
   c.strokeStyle='#e3e8ef'; c.stroke();
   c.fillStyle='#4a5568'; c.font='11.5px "Microsoft YaHei"';
   c.fillText('t = '+fx(S.t,3)+' s',   PAD-4, 21);
@@ -1133,6 +1149,12 @@ function render(){
   c.fillText(S.collided? '✔ 已发生碰撞 @ t = '+fx(S.tCol,3)+' s' : '○ 待碰撞', PAD-4, 36);
   c.fillStyle='#8a94a6';
   c.fillText('守恒条件：ΣFx = 0（气垫 μ≈'+fx(S.fric,3)+'）', PAD+156, 36);
+  /* 说明：pΣ 是【当前时刻】的动量，缓冲反弹/摩擦会改变它；
+     守恒结论依据的是下方"KPI 卡片"里碰撞前后两次实测值（见 p前 / p后） */
+  if(S.done){
+    c.fillStyle='#a8430a'; c.font='10px "Microsoft YaHei"';
+    c.fillText('※ pΣ 为当前瞬时值（受缓冲反弹影响）；守恒结论以下方「p前 / p后」实测值为准', PAD-4, 52);
+  }
 
   /* --- 光电门读数：贴在各自光电门正上方，门正下方列出该门所有滑块挡光时间 --- */
   {
